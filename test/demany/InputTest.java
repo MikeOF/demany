@@ -1,3 +1,6 @@
+package demany;
+
+import demany.SampleIndex.SampleIndexSpec;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.junit.jupiter.api.AfterEach;
@@ -5,13 +8,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-
 
 
 class InputTestHelper {
 
-    protected static JSONObject createInputJSON(String program) {
+    static JSONObject createInputJSON(String program) {
 
         JSONObject object = new JSONObject();
         JSONArray array = new JSONArray();
@@ -27,7 +28,7 @@ class InputTestHelper {
         return object;
     }
 
-    protected static void addSampleIndexJSON(JSONObject input, JSONObject jsonObject) {
+    static void addSampleIndexJSON(JSONObject input, JSONObject jsonObject) {
 
         JSONArray sampleIndexSpecArray = (JSONArray) input.get("sampleIndexSpecArray");
 
@@ -50,11 +51,11 @@ class InputTest {
     void testInputObjectConstructorCheckIndices() throws Exception {
 
         JSONObject inputObject = InputTestHelper.createInputJSON("CHECK_INDICES");
-        JSONObject sampleIndexJSON = SampleIndexSpecTestHelper.createSampleIndexJSON(
+        JSONObject sampleIndexJSON = TestUtil.createSampleIndexJSON(
                 "TestProject", "TestSample", "AGGGC", "TCGAA",  2
         );
         InputTestHelper.addSampleIndexJSON(inputObject, sampleIndexJSON);
-        SampleIndexSpec sampleIndexSpec = SampleIndexSpecTestHelper.getSampleIndexSpec(sampleIndexJSON);
+        SampleIndexSpec sampleIndexSpec = TestUtil.getSampleIndexSpec(sampleIndexJSON);
 
         Input input = new Input(inputObject.toJSONString());
 

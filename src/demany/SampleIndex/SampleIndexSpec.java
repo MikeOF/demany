@@ -1,3 +1,5 @@
+package demany.SampleIndex;
+
 import org.json.simple.JSONObject;
 
 public class SampleIndexSpec {
@@ -8,7 +10,7 @@ public class SampleIndexSpec {
     public final String index2;
     public final int lane;
 
-    protected SampleIndexSpec(JSONObject jsonObject) throws Exception {
+    public SampleIndexSpec(JSONObject jsonObject) throws Exception {
 
         try {
             project = jsonObject.get("project").toString();

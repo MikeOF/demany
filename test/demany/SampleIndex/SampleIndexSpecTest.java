@@ -1,70 +1,45 @@
-import org.json.simple.JSONObject;
+package demany.SampleIndex;
+
+import demany.TestUtil;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
-
-class SampleIndexSpecTestHelper {
-
-    protected static JSONObject createSampleIndexJSON(String project, String sample, String index1, String index2,
-                                                      int lane)  {
-
-        JSONObject object = new JSONObject();
-
-        object.put("project", project);
-        object.put("sample", sample);
-        object.put("index1", index1);
-        object.put("index2", index2);
-        object.put("lane", lane);
-
-        return object;
-    }
-
-    protected static SampleIndexSpec getSampleIndexSpec(JSONObject jsonObject) throws Exception {
-
-        return new SampleIndexSpec(jsonObject);
-    }
-
-    protected static SampleIndexSpec getSampleIndexSpec(String project, String sample, String index1, String index2,
-                                                        int lane) throws Exception {
-
-        return getSampleIndexSpec(createSampleIndexJSON(project, sample, index1, index2, lane));
-    }
-}
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 class SampleIndexSpecTest {
 
     @Test
     void testSampleIndexSpecConstructionWithIndex2() throws Exception {
 
-        SampleIndexSpec sampleIndexSpec = SampleIndexSpecTestHelper.getSampleIndexSpec(
+        SampleIndexSpec sampleIndexSpec = TestUtil.getSampleIndexSpec(
                 "TestProject", "TestSample", "AGGTC", "TCGTT", 1
         );
 
-        SampleIndexSpec sampleIndexSpecEquals = SampleIndexSpecTestHelper.getSampleIndexSpec(
+        SampleIndexSpec sampleIndexSpecEquals = TestUtil.getSampleIndexSpec(
                 "TestProject", "TestSample", "AGGTC", "TCGTT", 1
         );
 
-        SampleIndexSpec sampleIndexSpecDifferent1 = SampleIndexSpecTestHelper.getSampleIndexSpec(
+        SampleIndexSpec sampleIndexSpecDifferent1 = TestUtil.getSampleIndexSpec(
                 "TestProject", "TestSampleD", "AGGTC", "TCGTT", 1
         );
 
-        SampleIndexSpec sampleIndexSpecDifferent2 = SampleIndexSpecTestHelper.getSampleIndexSpec(
+        SampleIndexSpec sampleIndexSpecDifferent2 = TestUtil.getSampleIndexSpec(
                 "TestProjectD", "TestSample", "AGGTC", "TCGTT", 1
         );
 
-        SampleIndexSpec sampleIndexSpecDifferent3 = SampleIndexSpecTestHelper.getSampleIndexSpec(
+        SampleIndexSpec sampleIndexSpecDifferent3 = TestUtil.getSampleIndexSpec(
                 "TestProject", "TestSample", "AGGTCA", "TCGTT", 1
         );
 
-        SampleIndexSpec sampleIndexSpecDifferent4 = SampleIndexSpecTestHelper.getSampleIndexSpec(
+        SampleIndexSpec sampleIndexSpecDifferent4 = TestUtil.getSampleIndexSpec(
                 "TestProject", "TestSample", "AGGTC", null, 1
         );
 
-        SampleIndexSpec sampleIndexSpecDifferent5 = SampleIndexSpecTestHelper.getSampleIndexSpec(
+        SampleIndexSpec sampleIndexSpecDifferent5 = TestUtil.getSampleIndexSpec(
                 "TestProject", "TestSample", "AGGTC", "ATCGTT", 1
         );
 
-        SampleIndexSpec sampleIndexSpecDifferent6 = SampleIndexSpecTestHelper.getSampleIndexSpec(
+        SampleIndexSpec sampleIndexSpecDifferent6 = TestUtil.getSampleIndexSpec(
                 "TestProject", "TestSample", "AGGTC", "TCGTT", 2
         );
 
@@ -87,31 +62,31 @@ class SampleIndexSpecTest {
     @Test
     void testSampleIndexSpecConstructionWithoutIndex2() throws Exception {
 
-        SampleIndexSpec sampleIndexSpec = SampleIndexSpecTestHelper.getSampleIndexSpec(
+        SampleIndexSpec sampleIndexSpec = TestUtil.getSampleIndexSpec(
                 "TestProject", "TestSample", "AGGTC", null, 1
         );
 
-        SampleIndexSpec sampleIndexSpecEquals = SampleIndexSpecTestHelper.getSampleIndexSpec(
+        SampleIndexSpec sampleIndexSpecEquals = TestUtil.getSampleIndexSpec(
                 "TestProject", "TestSample", "AGGTC", null, 1
         );
 
-        SampleIndexSpec sampleIndexSpecDifferent1 = SampleIndexSpecTestHelper.getSampleIndexSpec(
+        SampleIndexSpec sampleIndexSpecDifferent1 = TestUtil.getSampleIndexSpec(
                 "TestProject", "TestSampleD", "AGGTC", null, 1
         );
 
-        SampleIndexSpec sampleIndexSpecDifferent2 = SampleIndexSpecTestHelper.getSampleIndexSpec(
+        SampleIndexSpec sampleIndexSpecDifferent2 = TestUtil.getSampleIndexSpec(
                 "TestProjectD", "TestSample", "AGGTC", null, 1
         );
 
-        SampleIndexSpec sampleIndexSpecDifferent3 = SampleIndexSpecTestHelper.getSampleIndexSpec(
+        SampleIndexSpec sampleIndexSpecDifferent3 = TestUtil.getSampleIndexSpec(
                 "TestProject", "TestSample", "AGGTCA", null, 1
         );
 
-        SampleIndexSpec sampleIndexSpecDifferent4 = SampleIndexSpecTestHelper.getSampleIndexSpec(
+        SampleIndexSpec sampleIndexSpecDifferent4 = TestUtil.getSampleIndexSpec(
                 "TestProject", "TestSample", "AGGTC", "ATCGTT", 1
         );
 
-        SampleIndexSpec sampleIndexSpecDifferent5 = SampleIndexSpecTestHelper.getSampleIndexSpec(
+        SampleIndexSpec sampleIndexSpecDifferent5 = TestUtil.getSampleIndexSpec(
                 "TestProject", "TestSample", "AGGTC", null, 2
         );
 

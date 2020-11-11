@@ -1,7 +1,10 @@
+package demany.SampleIndex;
+
+import demany.SequenceOperator;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.stream.Collectors;
 
 public class SampleIndexLookup {
 

@@ -1,3 +1,5 @@
+package demany;
+
 import java.util.*;
 
 public class SequenceOperator {

@@ -1,10 +1,12 @@
+package demany;
+
+import demany.SampleIndex.SampleIndexSpec;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.HashSet;
 
 public class Input {
@@ -28,7 +30,7 @@ public class Input {
         JSONArray sampleIndexSpecJSONArray = (JSONArray) inputObject.get("sampleIndexSpecArray");
 
         // collect sample index specs
-        sampleIndexSpecSet = new HashSet<SampleIndexSpec>();
+        sampleIndexSpecSet = new HashSet<>();
         for (Object sampleIndexSpecObject : sampleIndexSpecJSONArray) {
 
             sampleIndexSpecSet.add(new SampleIndexSpec((JSONObject) sampleIndexSpecObject));

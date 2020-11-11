@@ -1,4 +1,7 @@
+package demany.SampleIndex;
+
 import org.junit.jupiter.api.Test;
+import demany.TestUtil;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -11,7 +14,7 @@ class SampleIndexKeyMappingTest {
         SampleIndexKeyMapping keyMapping;
 
         // key length equals index length
-        sampleIndexSpec = SampleIndexSpecTestHelper.getSampleIndexSpec(
+        sampleIndexSpec = TestUtil.getSampleIndexSpec(
                 "TestProject", "TestSample", "AGG", "TTA", 2
         );
         keyMapping = new SampleIndexKeyMapping(
@@ -24,7 +27,7 @@ class SampleIndexKeyMappingTest {
         assertTrue(keyMapping.getIndex2IdentityKeySetCopy().contains("TTA"));
 
         // key length is less than the index length
-        sampleIndexSpec = SampleIndexSpecTestHelper.getSampleIndexSpec(
+        sampleIndexSpec = TestUtil.getSampleIndexSpec(
                 "TestProject", "TestSample", "AGG", "TTA", 2
         );
         keyMapping = new SampleIndexKeyMapping(
@@ -37,7 +40,7 @@ class SampleIndexKeyMappingTest {
         assertTrue(keyMapping.getIndex2IdentityKeySetCopy().contains("TT"));
 
         // key length is greater than the index length
-        sampleIndexSpec = SampleIndexSpecTestHelper.getSampleIndexSpec(
+        sampleIndexSpec = TestUtil.getSampleIndexSpec(
                 "TestProject", "TestSample", "AGG", "TTA", 2
         );
         keyMapping = new SampleIndexKeyMapping(
@@ -56,7 +59,7 @@ class SampleIndexKeyMappingTest {
         assertTrue(keyMapping.getIndex2IdentityKeySetCopy().contains("TTAT"));
 
         // key lengths are different
-        sampleIndexSpec = SampleIndexSpecTestHelper.getSampleIndexSpec(
+        sampleIndexSpec = TestUtil.getSampleIndexSpec(
                 "TestProject", "TestSample", "AGG", "TTA", 2
         );
         keyMapping = new SampleIndexKeyMapping(
@@ -78,7 +81,7 @@ class SampleIndexKeyMappingTest {
         SampleIndexSpec sampleIndexSpec;
         SampleIndexKeyMapping keyMapping;
 
-        sampleIndexSpec = SampleIndexSpecTestHelper.getSampleIndexSpec(
+        sampleIndexSpec = TestUtil.getSampleIndexSpec(
                 "TestProject", "TestSample", "AGT", "CTA", 2
         );
         keyMapping = new SampleIndexKeyMapping(
@@ -96,7 +99,7 @@ class SampleIndexKeyMappingTest {
         assertFalse(keyMapping.getIndex2KeySetCopy().contains("CGT"));
         assertFalse(keyMapping.getIndex2KeySetCopy().contains("CAN"));
 
-        sampleIndexSpec = SampleIndexSpecTestHelper.getSampleIndexSpec(
+        sampleIndexSpec = TestUtil.getSampleIndexSpec(
                 "TestProject", "TestSample", "AGG", "TTA", 2
         );
         keyMapping = new SampleIndexKeyMapping(
@@ -114,7 +117,7 @@ class SampleIndexKeyMappingTest {
         assertTrue(keyMapping.getIndex2KeySetCopy().contains("AT"));
         assertFalse(keyMapping.getIndex2KeySetCopy().contains("GC"));
 
-        sampleIndexSpec = SampleIndexSpecTestHelper.getSampleIndexSpec(
+        sampleIndexSpec = TestUtil.getSampleIndexSpec(
                 "TestProject", "TestSample", "AGT", "CTA", 2
         );
         keyMapping = new SampleIndexKeyMapping(
@@ -137,7 +140,7 @@ class SampleIndexKeyMappingTest {
         SampleIndexKeyMapping keyMapping;
 
         // false index key length == 0
-        sampleIndexSpec = SampleIndexSpecTestHelper.getSampleIndexSpec(
+        sampleIndexSpec = TestUtil.getSampleIndexSpec(
                 "TestProject", "TestSample", "AGG", "TTA", 2
         );
         keyMapping = new SampleIndexKeyMapping(
@@ -147,7 +150,7 @@ class SampleIndexKeyMappingTest {
         assertFalse(keyMapping.hasIndex2());
 
         // false index 2 == null
-        sampleIndexSpec = SampleIndexSpecTestHelper.getSampleIndexSpec(
+        sampleIndexSpec = TestUtil.getSampleIndexSpec(
                 "TestProject", "TestSample", "AGG", null, 2
         );
         keyMapping = new SampleIndexKeyMapping(
@@ -157,7 +160,7 @@ class SampleIndexKeyMappingTest {
         assertFalse(keyMapping.hasIndex2());
 
         // true
-        sampleIndexSpec = SampleIndexSpecTestHelper.getSampleIndexSpec(
+        sampleIndexSpec = TestUtil.getSampleIndexSpec(
                 "TestProject", "TestSample", "AGG", "TTA", 2
         );
         keyMapping = new SampleIndexKeyMapping(

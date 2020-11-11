@@ -1,4 +1,7 @@
+package demany.SampleIndex;
+
 import org.junit.jupiter.api.Test;
+import demany.TestUtil;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -10,14 +13,14 @@ class SampleIndexKeyMappingOverlapCheckTest {
 
         return new SampleIndexKeyMappingOverlapCheck(
                 new SampleIndexKeyMapping(
-                        SampleIndexSpecTestHelper.getSampleIndexSpec(
+                        TestUtil.getSampleIndexSpec(
                                 "TestProject1", "TestSample1", firstIndex1, firstIndex2, 1
                         ),
                         3,
                         3
                 ),
                 new SampleIndexKeyMapping(
-                        SampleIndexSpecTestHelper.getSampleIndexSpec(
+                        TestUtil.getSampleIndexSpec(
                                 "TestProject2", "TestSample2", secondIndex1, secondIndex2, 1
                         ),
                         3,
@@ -27,7 +30,7 @@ class SampleIndexKeyMappingOverlapCheckTest {
     }
 
     @Test
-    public void testSampleIndexKeyMappingOverlapCheckNoOverlapNoCollision() throws Exception {
+    void testSampleIndexKeyMappingOverlapCheckNoOverlapNoCollision() throws Exception {
 
         SampleIndexKeyMappingOverlapCheck overlapCheck;
 
@@ -58,7 +61,7 @@ class SampleIndexKeyMappingOverlapCheckTest {
     }
 
     @Test
-    public void testSampleIndexKeyMappingOverlapCheckOverlapNoCollision() throws Exception {
+    void testSampleIndexKeyMappingOverlapCheckOverlapNoCollision() throws Exception {
 
         SampleIndexKeyMappingOverlapCheck overlapCheck;
 

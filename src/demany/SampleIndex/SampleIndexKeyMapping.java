@@ -1,3 +1,7 @@
+package demany.SampleIndex;
+
+import demany.SequenceOperator;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 

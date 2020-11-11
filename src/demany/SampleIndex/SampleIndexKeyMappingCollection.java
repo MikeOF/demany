@@ -1,3 +1,5 @@
+package demany.SampleIndex;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 
@@ -28,7 +30,7 @@ public class SampleIndexKeyMappingCollection {
         // create the key mapping overlap check list
         this.sampleIndexKeyMappingOverlapCheckList = new ArrayList<>();
         for (int i = 0; i < this.sampleIndexKeyMappingList.size() - 1; i++) {
-            for (int j = 1; j < this.sampleIndexKeyMappingList.size(); j++) {
+            for (int j = i+1; j < this.sampleIndexKeyMappingList.size(); j++) {
 
                 this.sampleIndexKeyMappingOverlapCheckList.add(
                         new SampleIndexKeyMappingOverlapCheck(
