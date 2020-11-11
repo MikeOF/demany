@@ -1,6 +1,6 @@
 package demany.SampleIndex;
 
-import demany.SequenceOperator;
+import demany.Utils.SequenceOperator;
 
 import java.util.ArrayList;
 import java.util.HashSet;

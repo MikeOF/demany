@@ -1,5 +1,6 @@
-package demany;
+package demany.Utils;
 
+import demany.Utils.SequenceOperator;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
