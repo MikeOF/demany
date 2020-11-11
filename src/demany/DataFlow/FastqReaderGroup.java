@@ -55,6 +55,7 @@ public class FastqReaderGroup {
                 // check to see if we are done reading
                 if (sequenceLines.isNull()) {
                     this.doneReading = true;
+                    reader.close();
                     continue;
                 }
 

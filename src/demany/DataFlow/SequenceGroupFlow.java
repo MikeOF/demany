@@ -2,20 +2,26 @@ package demany.DataFlow;
 
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
-
-class LockSequenceGroupQueuePair {
-
-    final ReentrantLock lock = new ReentrantLock();
-    final Queue<SequenceGroup> sequenceGroups = new LinkedList<>();
-}
+import java.util.stream.Collectors;
 
 public class SequenceGroupFlow {
 
-    public final HashMap<String, LockSequenceGroupQueuePair> inSequenceGroupsByLaneStr = new HashMap<>();
-    public final HashMap<String, HashMap<String, LockSequenceGroupQueuePair>> outSeqGroupsByIdByLaneStr = new HashMap<>();
-    public final int maxSequenceGroupsAllowed;
+    static class LockSequenceGroupQueuePair {
+
+        final ReentrantLock lock = new ReentrantLock();
+        final Queue<SequenceGroup> sequenceGroups = new LinkedList<>();
+    }
+
+    private final int readerGroups;
+    private int readerGroupsClosed;
+    private final HashMap<String, LockSequenceGroupQueuePair> inSequenceGroupsByLaneStr = new HashMap<>();
+    private final HashMap<String, HashMap<String, LockSequenceGroupQueuePair>> outSeqGroupsByIdByLaneStr = new HashMap<>();
+    private final int maxSequenceGroupsAllowed;
 
     public SequenceGroupFlow(Set<String> idSet, Set<String> laneStrSet, int maxSequenceGroupsAllowed) {
+
+        // we will have the same number of reader threads as lanes
+        this.readerGroups = laneStrSet.size();
 
         this.maxSequenceGroupsAllowed = maxSequenceGroupsAllowed;
 
@@ -33,6 +39,27 @@ public class SequenceGroupFlow {
                 this.outSeqGroupsByIdByLaneStr.get(id).put(laneStr, new LockSequenceGroupQueuePair());
             }
         }
+    }
+
+    public void incrementReaderThreadsClosed() {
+        readerGroupsClosed++;
+    }
+
+    public boolean allReadThreadsClosed() {
+        return readerGroups == readerGroupsClosed;
+    }
+
+    public boolean moreMultiplexedSequenceGroupsAvailable() {
+
+        for (String laneStr : inSequenceGroupsByLaneStr.keySet()) {
+
+            // lock not needed
+            if (!inSequenceGroupsByLaneStr.get(laneStr).sequenceGroups.isEmpty())  {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public boolean moreMultiplexedSequenceGroupsNeeded(String laneStr) {
@@ -59,7 +86,7 @@ public class SequenceGroupFlow {
         }
     }
 
-    public SequenceGroup removeMultiplexedSequenceGroup(String laneStr) {
+    public SequenceGroup takeMultiplexedSequenceGroup(String laneStr) {
 
         LockSequenceGroupQueuePair pair = inSequenceGroupsByLaneStr.get(laneStr);
 
@@ -68,11 +95,37 @@ public class SequenceGroupFlow {
 
         try {
 
-            return pair.sequenceGroups.remove();
+            if (pair.sequenceGroups.isEmpty()) {
+                return null;
+            } else {
+                return pair.sequenceGroups.remove();
+            }
 
         } finally {
             pair.lock.unlock();
         }
+    }
+
+    public List<String> getMultiplexedSequenceGroupLaneStrPriorityList() {
+
+        // collect all the lane str values with multiplexed sequence groups
+        LinkedList<String> laneStrList = new LinkedList<>();
+        for (String laneStr : inSequenceGroupsByLaneStr.keySet()) {
+
+            LockSequenceGroupQueuePair pair = inSequenceGroupsByLaneStr.get(laneStr);
+
+            // lock not needed
+            int queueSize = pair.sequenceGroups.size();
+            if (queueSize > 0) {
+
+                laneStrList.add(laneStr);
+            }
+        }
+
+        // return a sorted list of lane str in decending order of queue size
+        return laneStrList.stream()
+                .sorted(Comparator.comparingInt(ls -> -inSequenceGroupsByLaneStr.get(ls).sequenceGroups.size())
+                ).collect(Collectors.toList());
     }
 
     public boolean moreDemultiplexedSequenceGroupsNeeded(String laneStr) {
@@ -106,5 +159,29 @@ public class SequenceGroupFlow {
                 pair.lock.unlock();
             }
         }
+    }
+
+    public HashMap<String, SequenceGroup> takeDemultiplexedSequenceGroups(String laneStr) {
+
+        HashMap<String, LockSequenceGroupQueuePair> pairById = outSeqGroupsByIdByLaneStr.get(laneStr);
+        HashMap<String, SequenceGroup> resultMap = new HashMap<>();
+
+        for (String id : pairById.keySet()) {
+
+            LockSequenceGroupQueuePair pair = pairById.get(id);
+
+            // block until we get the lock on the queue
+            pair.lock.lock();
+
+            try {
+
+                resultMap.put(id, pair.sequenceGroups.remove());
+
+            } finally {
+                pair.lock.unlock();
+            }
+        }
+
+        return resultMap;
     }
 }

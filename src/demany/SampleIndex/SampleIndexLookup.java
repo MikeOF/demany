@@ -8,6 +8,17 @@ import java.util.HashSet;
 
 public class SampleIndexLookup {
 
+    static class SampleIndexSpecIndex2KeySetPair {
+
+        SampleIndexSpec sampleIndexSpec;
+        HashSet<String> index2KeySet;
+
+        SampleIndexSpecIndex2KeySetPair(SampleIndexSpec sampleIndexSpec, HashSet<String> index2KeySet) {
+            this.sampleIndexSpec = sampleIndexSpec;
+            this.index2KeySet = index2KeySet;
+        }
+    }
+
     private final HashMap<String, SampleIndexSpecIndex2KeySetPair> lookupMap;
 
     public SampleIndexLookup(SampleIndexKeyMappingCollection sampleIndexKeyMappingCollection,
@@ -97,16 +108,5 @@ public class SampleIndexLookup {
 
         // without index 2 return the sample index spec
         return pair.sampleIndexSpec;
-    }
-}
-
-class SampleIndexSpecIndex2KeySetPair {
-
-    SampleIndexSpec sampleIndexSpec;
-    HashSet<String> index2KeySet;
-
-    SampleIndexSpecIndex2KeySetPair(SampleIndexSpec sampleIndexSpec, HashSet<String> index2KeySet) {
-        this.sampleIndexSpec = sampleIndexSpec;
-        this.index2KeySet = index2KeySet;
     }
 }
