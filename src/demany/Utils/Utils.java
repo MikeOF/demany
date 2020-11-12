@@ -7,6 +7,8 @@ import java.util.zip.GZIPOutputStream;
 
 public class Utils {
 
+    public static String undeterminedId = "undetermined";
+
     public static BufferedReader getBufferedGzippedFileReader(Path path) throws IOException {
         InputStream fileInputStream = new FileInputStream(path.toString());
         InputStream gzipInputStream = new GZIPInputStream(fileInputStream);
@@ -19,5 +21,17 @@ public class Utils {
         OutputStream gzipOutputStream = new GZIPOutputStream(fileOutputStream);
         Writer encoder = new OutputStreamWriter(gzipOutputStream);
         return new BufferedWriter(encoder);
+    }
+
+    public static String getIdForProjectSample(String project, String sample) {
+        return project + "-" + sample;
+    }
+
+    public static void tryToSleep(long sleepMilliseconds) {
+        try {
+            Thread.sleep(sleepMilliseconds);
+        } catch (InterruptedException e) {
+            throw new RuntimeException("could not sleep: " + e.getMessage());
+        }
     }
 }

@@ -1,6 +1,7 @@
 package demany.SampleIndex;
 
 import demany.Utils.SequenceOperator;
+import demany.Utils.Utils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -8,18 +9,18 @@ import java.util.HashSet;
 
 public class SampleIndexLookup {
 
-    static class SampleIndexSpecIndex2KeySetPair {
+    static class ProjectSampleIdIndex2KeySetPair {
 
-        SampleIndexSpec sampleIndexSpec;
+        String id;
         HashSet<String> index2KeySet;
 
-        SampleIndexSpecIndex2KeySetPair(SampleIndexSpec sampleIndexSpec, HashSet<String> index2KeySet) {
-            this.sampleIndexSpec = sampleIndexSpec;
+        ProjectSampleIdIndex2KeySetPair(SampleIndexSpec sampleIndexSpec, HashSet<String> index2KeySet) {
+            this.id = Utils.getIdForProjectSample(sampleIndexSpec.project, sampleIndexSpec.sample);
             this.index2KeySet = index2KeySet;
         }
     }
 
-    private final HashMap<String, SampleIndexSpecIndex2KeySetPair> lookupMap;
+    private final HashMap<String, ProjectSampleIdIndex2KeySetPair> lookupMap;
 
     public SampleIndexLookup(SampleIndexKeyMappingCollection sampleIndexKeyMappingCollection,
                              boolean index2ReverseCompliment) {
@@ -80,7 +81,7 @@ public class SampleIndexLookup {
             }
 
             // add index 1 key -> (sample index spec, index 2 key set) mappings to the lookup dict
-            SampleIndexSpecIndex2KeySetPair pair = new SampleIndexSpecIndex2KeySetPair(
+            ProjectSampleIdIndex2KeySetPair pair = new ProjectSampleIdIndex2KeySetPair(
                     keyMapping.sampleIndexSpec, index2KeySet
             );
 
@@ -90,9 +91,9 @@ public class SampleIndexLookup {
         }
     }
 
-    public SampleIndexSpec lookupSampleIndexSpec(String index1, String index2) {
+    public String lookupProjectSampleId(String index1, String index2) {
 
-        SampleIndexSpecIndex2KeySetPair pair = lookupMap.get(index1);
+        ProjectSampleIdIndex2KeySetPair pair = lookupMap.get(index1);
 
         // if we have not found a pair, then return null
         if (pair == null) { return null; }
@@ -101,12 +102,12 @@ public class SampleIndexLookup {
         if (index2 != null && pair.index2KeySet != null) {
 
             if (pair.index2KeySet.contains(index2)) {
-                return pair.sampleIndexSpec;
+                return pair.id;
             }
             return null;
         }
 
         // without index 2 return the sample index spec
-        return pair.sampleIndexSpec;
+        return pair.id;
     }
 }

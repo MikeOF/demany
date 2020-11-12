@@ -2,7 +2,9 @@ package demany.Threading;
 
 import demany.DataFlow.SequenceGroup;
 import demany.DataFlow.SequenceGroupFlow;
+import demany.DataFlow.SequenceLines;
 import demany.SampleIndex.SampleIndexLookup;
+import demany.Utils.Utils;
 
 import java.util.HashMap;
 import java.util.List;
@@ -10,9 +12,13 @@ import java.util.List;
 public class DemultiplexingThread extends Thread {
 
     final SequenceGroupFlow sequenceGroupFlow;
+    final HashMap<String, SampleIndexLookup> sampleIndexLookupByLaneStr;
 
-    public DemultiplexingThread(SequenceGroupFlow sequenceGroupFlow, HashMap<String, SampleIndexLookup> sampleIndexLookupByLaneStr) {
+    public DemultiplexingThread(SequenceGroupFlow sequenceGroupFlow,
+                                HashMap<String, SampleIndexLookup> sampleIndexLookupByLaneStr) {
+
         this.sequenceGroupFlow = sequenceGroupFlow;
+        this.sampleIndexLookupByLaneStr = sampleIndexLookupByLaneStr;
     }
 
     public void run() {
@@ -38,7 +44,9 @@ public class DemultiplexingThread extends Thread {
                         if (sequenceGroup == null) { continue; }  // try nex lane
 
                         // demultiplex this sequence group
-                        HashMap<String, SequenceGroup> sequenceGroupById = demultiplexSequenceGroup(sequenceGroup);
+                        HashMap<String, SequenceGroup> sequenceGroupById = demultiplexSequenceGroup(
+                                laneStr, sequenceGroup
+                        );
 
                         // put the demultiplexed sequence groups in their out queues
                         sequenceGroupFlow.addDemultiplexedSequenceGroups(laneStr, sequenceGroupById);
@@ -57,22 +65,18 @@ public class DemultiplexingThread extends Thread {
                 }
 
                 // sleep a bit
-                tryToSleep(sleepMilliseconds);
+                Utils.tryToSleep(sleepMilliseconds);
             }
         }
     }
 
-    private void tryToSleep(long sleepMilliseconds) {
-        try {
-            sleep(sleepMilliseconds);
-        } catch (InterruptedException e) {
-            throw new RuntimeException("could not sleep: " + e.getMessage());
-        }
-    }
-
-    private static HashMap<String, SequenceGroup> demultiplexSequenceGroup(SequenceGroup sequenceGroup) {
+    private HashMap<String, SequenceGroup> demultiplexSequenceGroup(String laneStr, SequenceGroup sequenceGroup) {
 
         HashMap<String, SequenceGroup> sequenceGroupById = new HashMap<>();
+
+        SampleIndexLookup lookup = sampleIndexLookupByLaneStr.get(laneStr);
+
+
 
         return sequenceGroupById;
     }

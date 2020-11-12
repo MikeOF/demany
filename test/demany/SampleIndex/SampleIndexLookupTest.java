@@ -40,15 +40,15 @@ class SampleIndexLookupTest {
                 4, 4, false
         );
 
-        assertEquals("TestProject1", lookup.lookupSampleIndexSpec("AGCT", "CCGT").project);
-        assertEquals("TestSample2", lookup.lookupSampleIndexSpec("CAGG", "GTAA").sample);
-        assertEquals("TCAC", lookup.lookupSampleIndexSpec("TCAC", "AACC").index1);
-        assertEquals("TestProject1", lookup.lookupSampleIndexSpec("AGCG", "CCGT").project);
-        assertEquals("TestSample2", lookup.lookupSampleIndexSpec("CAGG", "GTAT").sample);
-        assertEquals("TCAC", lookup.lookupSampleIndexSpec("TNAC", "ANCC").index1);
-        assertNull(lookup.lookupSampleIndexSpec("ATCG", "ACGT"));
-        assertNull(lookup.lookupSampleIndexSpec("CTTG", "GTAA"));
-        assertNull(lookup.lookupSampleIndexSpec("NNAC", "AACC"));
+        assertEquals("TestProject1-TestSample1", lookup.lookupProjectSampleId("AGCT", "CCGT"));
+        assertEquals("TestProject2-TestSample2", lookup.lookupProjectSampleId("CAGG", "GTAA"));
+        assertEquals("TestProject3-TestSample3", lookup.lookupProjectSampleId("TCAC", "AACC"));
+        assertEquals("TestProject1-TestSample1", lookup.lookupProjectSampleId("AGCG", "CCGT"));
+        assertEquals("TestProject2-TestSample2", lookup.lookupProjectSampleId("CAGG", "GTAT"));
+        assertEquals("TestProject3-TestSample3", lookup.lookupProjectSampleId("TNAC", "ANCC"));
+        assertNull(lookup.lookupProjectSampleId("ATCG", "ACGT"));
+        assertNull(lookup.lookupProjectSampleId("CTTG", "GTAA"));
+        assertNull(lookup.lookupProjectSampleId("NNAC", "AACC"));
     }
 
     @Test
@@ -65,23 +65,23 @@ class SampleIndexLookupTest {
         );
 
         // Identity lookup
-        assertEquals("TestProject1", lookup.lookupSampleIndexSpec("AGCT", "CCGT").project);
-        assertEquals("TestSample2", lookup.lookupSampleIndexSpec("ACGT", "GTAA").sample);
-        assertEquals("TCAC", lookup.lookupSampleIndexSpec("TCAC", "AACC").index1);
+        assertEquals("TestProject1-TestSample1", lookup.lookupProjectSampleId("AGCT", "CCGT"));
+        assertEquals("TestProject2-TestSample2", lookup.lookupProjectSampleId("ACGT", "GTAA"));
+        assertEquals("TestProject3-TestSample3", lookup.lookupProjectSampleId("TCAC", "AACC"));
 
         // Pruned Key miss
-        assertNull(lookup.lookupSampleIndexSpec("ACCT", "CCGT"));
-        assertNull(lookup.lookupSampleIndexSpec("AGGT", "GTAA"));
+        assertNull(lookup.lookupProjectSampleId("ACCT", "CCGT"));
+        assertNull(lookup.lookupProjectSampleId("AGGT", "GTAA"));
 
         // Key lookup
-        assertEquals("TestProject1", lookup.lookupSampleIndexSpec("AGCG", "CCGT").project);
-        assertEquals("TestSample2", lookup.lookupSampleIndexSpec("ACGT", "GTAT").sample);
-        assertEquals("TCAC", lookup.lookupSampleIndexSpec("TNAC", "ANCC").index1);
+        assertEquals("TestProject1-TestSample1", lookup.lookupProjectSampleId("AGCG", "CCGT"));
+        assertEquals("TestProject2-TestSample2", lookup.lookupProjectSampleId("ACGT", "GTAT"));
+        assertEquals("TestProject3-TestSample3", lookup.lookupProjectSampleId("TNAC", "ANCC"));
 
         // Nonsense misses
-        assertNull(lookup.lookupSampleIndexSpec("ATCG", "ACGT"));
-        assertNull(lookup.lookupSampleIndexSpec("CTTG", "GTAA"));
-        assertNull(lookup.lookupSampleIndexSpec("NNAC", "AACC"));
+        assertNull(lookup.lookupProjectSampleId("ATCG", "ACGT"));
+        assertNull(lookup.lookupProjectSampleId("CTTG", "GTAA"));
+        assertNull(lookup.lookupProjectSampleId("NNAC", "AACC"));
     }
 
     @Test
