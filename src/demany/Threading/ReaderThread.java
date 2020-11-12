@@ -13,13 +13,14 @@ public class ReaderThread extends Thread {
     private final FastqReaderGroup fastqReaderGroup;
     private final SequenceGroupFlow sequenceGroupFlow;
 
-    public ReaderThread(SequenceGroupFlow sequenceGroupFlow, String laneStr, FastqReaderGroup fastqReaderGroup) {
+    public ReaderThread(String laneStr, FastqReaderGroup fastqReaderGroup, SequenceGroupFlow sequenceGroupFlow) {
 
-        this.sequenceGroupFlow = sequenceGroupFlow;
         this.laneStr = laneStr;
         this.fastqReaderGroup = fastqReaderGroup;
+        this.sequenceGroupFlow = sequenceGroupFlow;
     }
 
+    @Override
     public void run() {
 
         long sleepMilliseconds = 100;
@@ -35,7 +36,26 @@ public class ReaderThread extends Thread {
                     // read a group of sequences
                     SequenceGroup sequenceGroup = fastqReaderGroup.readSequences();
 
-                    sequenceGroupFlow.addMultiplexedSequenceGroup(laneStr, sequenceGroup);
+                    // make sure that the sequence group is completed
+                    if (!sequenceGroup.isCompleted()) {
+                        throw new RuntimeException("a reader thread recieved a sequence group that was not completed");
+                    }
+
+                    // check to see if the sequence group is empty
+                    if (sequenceGroup.isEmpty()) {
+
+                        // make sure the fastq reader group is done reading
+                        if (!fastqReaderGroup.doneReading) {
+                            throw new RuntimeException(
+                                    "a fastq reader group that isn't done reading returned an empty sequence group"
+                            );
+                        }
+
+                    } else {
+
+                        // add this non-empty sequence group to the flow
+                        sequenceGroupFlow.addMultiplexedSequenceGroup(laneStr, sequenceGroup);
+                    }
 
                 } catch (IOException e) {
                     throw new RuntimeException("could not read sequences: " + e.getMessage());
@@ -48,7 +68,18 @@ public class ReaderThread extends Thread {
 
                 // sleep a bit
                 Utils.tryToSleep(sleepMilliseconds);
+
+                // increase sleep milliseconds
+                sleepMilliseconds = (sleepMilliseconds + 10);
+
+            } else {
+
+                // decrease sleep milliseconds
+                if (sleepMilliseconds > 20) { sleepMilliseconds = sleepMilliseconds - 10; }
             }
         }
+
+        // since this thread is done reading mark that info on the sequence flow
+        this.sequenceGroupFlow.markReaderThreadFinished(this.laneStr);
     }
 }

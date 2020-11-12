@@ -7,16 +7,23 @@ import org.json.simple.JSONValue;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.Set;
 
 public class Input {
 
+    static final String programKey = "program";
+    static final String sampleIndexSpecArrayKey = "sampleIndexSpecArray";
+    static final String workdirPathKey = "workdirPath";
+    static final String bclPathKey = "bclPath";
+
     public enum Program { CHECK_INDICES, DEMULTIPLEX }
 
-    private final Input.Program program;
-    private final HashSet<SampleIndexSpec> sampleIndexSpecSet;
-    private final Path workdirPath;
-    private final Path bclPath;
+    public final Input.Program program;
+    public final Set<SampleIndexSpec> sampleIndexSpecSet;
+    public final Path workdirPath;
+    public final Path bclPath;
 
     public Input(String jsonInput) throws Exception {
 
@@ -24,39 +31,27 @@ public class Input {
         JSONObject inputObject = (JSONObject) JSONValue.parse(jsonInput);
 
         // get the program to be run
-        program = Input.Program.valueOf(inputObject.get("program").toString());
+        this.program = Input.Program.valueOf(inputObject.get(Input.programKey).toString());
 
         // create the sample index spec array
-        JSONArray sampleIndexSpecJSONArray = (JSONArray) inputObject.get("sampleIndexSpecArray");
+        JSONArray sampleIndexSpecJSONArray = (JSONArray) inputObject.get(Input.sampleIndexSpecArrayKey);
 
         // collect sample index specs
-        sampleIndexSpecSet = new HashSet<>();
+        Set<SampleIndexSpec> tempSampleIndexSpecSet = new HashSet<>();
         for (Object sampleIndexSpecObject : sampleIndexSpecJSONArray) {
 
-            sampleIndexSpecSet.add(new SampleIndexSpec((JSONObject) sampleIndexSpecObject));
+            tempSampleIndexSpecSet.add(new SampleIndexSpec((JSONObject) sampleIndexSpecObject));
         }
+        this.sampleIndexSpecSet = Collections.unmodifiableSet(tempSampleIndexSpecSet);
 
         // get the workdir path to work from
-        workdirPath = Paths.get(inputObject.get("workdirPath").toString()).toAbsolutePath();
+        this.workdirPath = Paths.get(inputObject.get(Input.workdirPathKey).toString()).toAbsolutePath();
 
         // if we are demultiplexing a bcl dir, get its path
-        if (program == Input.Program.DEMULTIPLEX) {
-            bclPath = Paths.get(inputObject.get("bclPath").toString()).toAbsolutePath();
+        if (this.program == Input.Program.DEMULTIPLEX) {
+            this.bclPath = Paths.get(inputObject.get(Input.bclPathKey).toString()).toAbsolutePath();
         } else {
-            bclPath = null;
+            this.bclPath = null;
         }
     }
-
-    public String getProgram() {
-        return program.toString();
-    }
-
-    public HashSet<SampleIndexSpec> getSampleIndexSpecs() {
-        return new HashSet<>(sampleIndexSpecSet);
-    }
-
-    public Path getWorkdirPath() { return workdirPath; }
-
-    public Path getBclPath() { return bclPath; }
-
 }

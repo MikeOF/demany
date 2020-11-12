@@ -59,7 +59,7 @@ class InputTest {
 
         Input input = new Input(inputObject.toJSONString());
 
-        assertEquals("CHECK_INDICES", input.getProgram());
-        assertEquals(sampleIndexSpec, input.getSampleIndexSpecs().iterator().next());
+        assertEquals("CHECK_INDICES", input.program.name());
+        assertEquals(sampleIndexSpec, input.sampleIndexSpecSet.iterator().next());
     }
 }

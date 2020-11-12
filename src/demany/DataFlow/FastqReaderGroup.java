@@ -64,6 +64,8 @@ public class FastqReaderGroup {
             }
         }
 
+        sequenceGroup.markCompleted();
+
         return sequenceGroup;
     }
 }
