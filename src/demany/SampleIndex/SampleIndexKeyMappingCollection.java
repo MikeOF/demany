@@ -2,6 +2,7 @@ package demany.SampleIndex;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Set;
 
 public class SampleIndexKeyMappingCollection {
 
@@ -10,7 +11,7 @@ public class SampleIndexKeyMappingCollection {
     private final boolean hasIdentityKeyCollision;
     private final boolean hasKeyOverlap;
 
-    public SampleIndexKeyMappingCollection(HashSet<SampleIndexSpec> sampleIndexSpecSet, int index1KeyLength,
+    public SampleIndexKeyMappingCollection(Set<SampleIndexSpec> sampleIndexSpecSet, int index1KeyLength,
                                            int index2KeyLength) {
 
         // validate arguments

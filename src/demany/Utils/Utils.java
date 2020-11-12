@@ -7,8 +7,6 @@ import java.util.zip.GZIPOutputStream;
 
 public class Utils {
 
-    public static String undeterminedId = "undetermined";
-
     public static BufferedReader getBufferedGzippedFileReader(Path path) throws IOException {
         InputStream fileInputStream = new FileInputStream(path.toString());
         InputStream gzipInputStream = new GZIPInputStream(fileInputStream);

@@ -1,7 +1,9 @@
 package demany.Utils;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -15,6 +17,7 @@ public class Fastq {
     public static final String INDEX_1_READ_TYPE_STR = "I1";
     public static final String INDEX_2_READ_TYPE_STR = "I2";
     public static final String SAMPLE_1_STR = "S1";
+    public static final String STANDARD_TAIL = "001.fastq.gz";
 
     public static final Pattern undeterminedFastqPattern = Pattern.compile(
             "^(undetermined)_(S[0-9]+)_(L[0-9]*[1-9]+)_([RI][1-9]+[0-9]*)_(001\\.fastq\\.gz)$",
@@ -40,6 +43,32 @@ public class Fastq {
     public final String readTypeStr;
     public final String tail;
     public final boolean isAnIndexFastq;
+
+    public static Fastq getSampleFastqAtDir(Path dirPath, String sample, String laneStr, String readTypeStr) {
+
+        checkParentDirPath(dirPath);
+
+        return new Fastq(dirPath.resolve(getFilenameForSampleFastq(sample, laneStr, readTypeStr)));
+    }
+
+    public static Fastq getUndeterminedFastqAtDir(Path dirPath, String laneStr, String readTypeStr) {
+
+        checkParentDirPath(dirPath);
+
+        return new Fastq(dirPath.resolve(getFilenameForUndeterminedFastq(laneStr, readTypeStr)));
+    }
+
+    private static void checkParentDirPath(Path dirPath) {
+
+        // check path
+        if (!dirPath.isAbsolute()) {
+            throw new RuntimeException("dirPath must be absolute");
+        }
+
+        if (!Files.isDirectory(dirPath)) {
+            throw new RuntimeException("dirPath must be an existant directory");
+        }
+    }
 
     public Fastq(Path path) throws RuntimeException {
 
@@ -69,6 +98,14 @@ public class Fastq {
 
         // determine if this is an index fastq
         this.isAnIndexFastq = indexReadTypePattern.matcher(this.readTypeStr).matches();
+    }
+
+    private static String getFilenameForSampleFastq(String sample, String laneStr, String readTypeStr) {
+        return sample + "_" + SAMPLE_1_STR + "_" + laneStr + "_" + readTypeStr + "_" + STANDARD_TAIL;
+    }
+
+    private static String getFilenameForUndeterminedFastq(String laneStr, String readTypeStr) {
+        return "Undetermined_S0_" + laneStr + "_" + readTypeStr + "_" + STANDARD_TAIL;
     }
 
     public boolean isAnUndeterminedFastq() {

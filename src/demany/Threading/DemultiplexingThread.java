@@ -1,5 +1,6 @@
 package demany.Threading;
 
+import demany.Context;
 import demany.DataFlow.SequenceGroup;
 import demany.DataFlow.SequenceGroupFlow;
 import demany.DataFlow.SequenceLines;
@@ -12,13 +13,12 @@ import java.util.List;
 public class DemultiplexingThread extends Thread {
 
     final SequenceGroupFlow sequenceGroupFlow;
-    final HashMap<String, SampleIndexLookup> sampleIndexLookupByLaneStr;
+    final Context context;
 
-    public DemultiplexingThread(SequenceGroupFlow sequenceGroupFlow,
-                                HashMap<String, SampleIndexLookup> sampleIndexLookupByLaneStr) {
+    public DemultiplexingThread(SequenceGroupFlow sequenceGroupFlow, Context context) {
 
         this.sequenceGroupFlow = sequenceGroupFlow;
-        this.sampleIndexLookupByLaneStr = sampleIndexLookupByLaneStr;
+        this.context = context;
     }
 
     public void run() {
@@ -74,8 +74,7 @@ public class DemultiplexingThread extends Thread {
 
         HashMap<String, SequenceGroup> sequenceGroupById = new HashMap<>();
 
-        SampleIndexLookup lookup = sampleIndexLookupByLaneStr.get(laneStr);
-
+        SampleIndexLookup lookup = context.getSampleIndexLookupForLane(laneStr);
 
 
         return sequenceGroupById;
