@@ -3,6 +3,7 @@ package demany;
 import demany.SampleIndex.SampleIndexKeyMappingCollection;
 import demany.SampleIndex.SampleIndexLookup;
 import demany.SampleIndex.SampleIndexSpec;
+import demany.Utils.Fastq;
 import demany.Utils.Utils;
 
 import java.io.IOException;
@@ -56,6 +57,7 @@ public class Context {
     public final Map<String, Set<SampleIdData>> sampleIdDataSetByLaneStr;
     public final Map<String, Set<SampleIndexSpec>> sampleIndexSpecSetByLaneStr;
     public final Map<String, SampleIndexLookup> sampleIndexLookupByLaneStr;
+    public final Map<String, Map<String, Map<String, Fastq>>> outputFastqByReadTypeByIdByLaneStr;
 
     public Context(
             Set<SampleIndexSpec> sampleIndexSpecSet,
@@ -148,7 +150,7 @@ public class Context {
             modifiableSampleIndexSpecSetByLaneStr.get(laneStr).add(sampleIndexSpec);
         }
 
-        // set unmodifiable views of the sample maps on this context object
+        // set unmodifiable views of the sample maps on this context intance
         modifiableSampleIdDataSetByLaneStr.replaceAll(
                 (k, v) -> Collections.unmodifiableSet(modifiableSampleIdDataSetByLaneStr.get(k))
         );
@@ -173,7 +175,77 @@ public class Context {
             );
         }
 
-        // set an unmodifiable view of the sample index lookup by lane map on this context object
+        // set an unmodifiable view of the sample index lookup by lane map on this context instance
         this.sampleIndexLookupByLaneStr = Collections.unmodifiableMap(modifiableSampleIndexLookupByLaneStr);
+
+        // create the map of output fastqs
+        Map<String, Map<String, Map<String, Fastq>>> modifiableOutputFastqByReadTypeByIdByLaneStr = new HashMap<>();
+        for (String laneStr : laneStrByLaneInt.values()) {
+
+            Map<String, Map<String, Fastq>> outputFastqByReadTypeById = new HashMap<>();
+
+            // add undetermined fastqs for this lane
+            outputFastqByReadTypeById.put(
+                    Context.undeterminedId,
+                    getUndeterminedOutputFastqByReadTypeForLane(laneStr)
+            );
+
+            // add sample fastqs for each sample in this lane
+            for (SampleIdData sampleIdData : this.sampleIdDataSetByLaneStr.get(laneStr)) {
+
+                outputFastqByReadTypeById.put(
+                        sampleIdData.id,
+                        getSampleOutputFastqByReadTypeForLane(sampleIdData, laneStr)
+                );
+            }
+
+            // add the map for this lane to the parent map
+            modifiableOutputFastqByReadTypeByIdByLaneStr.put(
+                    laneStr,
+                    Collections.unmodifiableMap(outputFastqByReadTypeById)
+            );
+        }
+
+        // set an unmodifiable view of the output fastq map on this context intance
+        this.outputFastqByReadTypeByIdByLaneStr = Collections.unmodifiableMap(
+                modifiableOutputFastqByReadTypeByIdByLaneStr
+        );
+    }
+
+    private Map<String, Fastq> getUndeterminedOutputFastqByReadTypeForLane(String laneStr) {
+
+        HashMap<String, Fastq> resultMap = new HashMap<>();
+
+        for (String readTypeStr : this.readTypeStrSet) {
+
+            resultMap.put(
+                    readTypeStr,
+                    Fastq.getUndeterminedFastqAtDir(this.outputDirPath, laneStr, readTypeStr)
+            );
+        }
+
+        return Collections.unmodifiableMap(resultMap);
+    }
+
+    private Map<String, Fastq> getSampleOutputFastqByReadTypeForLane(SampleIdData sampleIdData, String laneStr)
+            throws IOException {
+
+        // create the dir for this sample
+        Path sampleOutputDir = this.outputDirPath.resolve(sampleIdData.project).resolve(sampleIdData.sample);
+        Files.createDirectories(sampleOutputDir);
+
+        // create the fastq by id map
+        HashMap<String, Fastq> resultMap = new HashMap<>();
+
+        // add a fastq to the map for each read type
+        for (String readTypeStr : this.readTypeStrSet) {
+
+            resultMap.put(
+                    readTypeStr,
+                    Fastq.getSampleFastqAtDir(sampleOutputDir, sampleIdData.sample, laneStr, readTypeStr)
+            );
+        }
+
+        return Collections.unmodifiableMap(resultMap);
     }
 }

@@ -8,74 +8,28 @@ import demany.Utils.Fastq;
 import demany.Utils.Utils;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.Map;
 
 public class WriterThread extends Thread {
 
     private final String laneStr;
     private final SequenceGroupFlow sequenceGroupFlow;
-    private final Context context;
     private final HashMap<String, FastqWriterGroup> fastqWriterGroupById = new HashMap<>();
 
     public WriterThread(String laneStr, SequenceGroupFlow sequenceGroupFlow, Context context) throws IOException {
 
         this.laneStr = laneStr;
         this.sequenceGroupFlow = sequenceGroupFlow;
-        this.context = context;
 
         // add an undetermined fastq writer group for this lane
-        this.fastqWriterGroupById.put(
-                Context.undeterminedId,
-                new FastqWriterGroup(getUndeterminedOutputFastqByReadType())
-        );
-
-        // add a fastq writer group for each sample in this lane
-        for (Context.SampleIdData sampleIdData : this.context.sampleIdDataSetByLaneStr.get(laneStr)) {
-
+        Map<String, Map<String, Fastq>> outputFastqByReadTypeById = context.outputFastqByReadTypeByIdByLaneStr.get(laneStr);
+        for (String id : outputFastqByReadTypeById.keySet()) {
             this.fastqWriterGroupById.put(
-                    sampleIdData.id,
-                    new FastqWriterGroup(getSampleOutputFastqByReadType(sampleIdData))
+                    id,
+                    new FastqWriterGroup(outputFastqByReadTypeById.get(id))
             );
         }
-
-    }
-
-    private HashMap<String, Fastq> getUndeterminedOutputFastqByReadType() {
-
-        HashMap<String, Fastq> resultMap = new HashMap<>();
-
-        for (String readTypeStr : this.context.readTypeStrSet) {
-
-            resultMap.put(
-                    readTypeStr,
-                    Fastq.getUndeterminedFastqAtDir(this.context.outputDirPath, this.laneStr, readTypeStr)
-            );
-        }
-
-        return resultMap;
-    }
-
-    private HashMap<String, Fastq> getSampleOutputFastqByReadType(Context.SampleIdData sampleIdData) throws IOException {
-
-        // create the dir for this sample
-        Path sampleOutputDir = this.context.outputDirPath.resolve(sampleIdData.project).resolve(sampleIdData.sample);
-        Files.createDirectories(sampleOutputDir);
-
-        // create the fastq by id map
-        HashMap<String, Fastq> resultMap = new HashMap<>();
-
-        // add a fastq to the map for each read type
-        for (String readTypeStr : this.context.readTypeStrSet) {
-
-            resultMap.put(
-                    readTypeStr,
-                    Fastq.getSampleFastqAtDir(sampleOutputDir, sampleIdData.sample, this.laneStr, readTypeStr)
-            );
-        }
-
-        return resultMap;
     }
 
     @Override

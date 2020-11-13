@@ -6,12 +6,13 @@ import demany.Utils.Utils;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Map;
 
 public class FastqWriterGroup {
 
     public final HashMap<String, BufferedWriter> writerByReadType = new HashMap<>();
 
-    public FastqWriterGroup(HashMap<String, Fastq> fastqByReadType) throws IOException {
+    public FastqWriterGroup(Map<String, Fastq> fastqByReadType) throws IOException {
 
         // get a writer for each fastq path passed in
         for (String readType : fastqByReadType.keySet()) {
