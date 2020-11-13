@@ -34,6 +34,8 @@ public class Fastq {
             Pattern.CASE_INSENSITIVE
     );
 
+    private static final Pattern laneStrPattern = Pattern.compile("(L)([0]*)([0-9]*)", Pattern.CASE_INSENSITIVE);
+
     public final Path path;
     public final String filename;
     private final boolean isUndetermined;
@@ -140,6 +142,17 @@ public class Fastq {
     @Override
     public int hashCode() {
         return path.hashCode();
+    }
+
+    public static int getLaneIntFromLaneStr(String laneStr) {
+
+        Matcher matcher = Fastq.laneStrPattern.matcher(laneStr);
+
+        if (!matcher.matches()) {
+            throw new RuntimeException("could not match the lane str: " + laneStr);
+        }
+
+        return Integer.parseInt(matcher.group(3));
     }
 
     public static HashMap<String, Fastq> mapFastqsByReadType(Set<Fastq> fastqSet) {

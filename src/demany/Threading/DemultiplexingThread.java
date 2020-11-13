@@ -93,13 +93,13 @@ public class DemultiplexingThread extends Thread {
 
         sequenceGroupById.put(
                 Context.undeterminedId,
-                new SequenceGroup(this.context.readTypeStrSet, this.context.demultiplexedSequenceGroupSize)
+                new SequenceGroup(this.context.readTypeSet, this.context.demultiplexedSequenceGroupSize)
         );
 
         for (Context.SampleIdData sampleIdData : this.context.sampleIdDataSetByLaneStr.get(laneStr)) {
             sequenceGroupById.put(
                     sampleIdData.id,
-                    new SequenceGroup(this.context.readTypeStrSet, this.context.demultiplexedSequenceGroupSize)
+                    new SequenceGroup(this.context.readTypeSet, this.context.demultiplexedSequenceGroupSize)
             );
         }
 

@@ -4,10 +4,13 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class AdHocTests {
@@ -34,5 +37,31 @@ public class AdHocTests {
 
         LinkedList<String> expectedList = new LinkedList<String>(Arrays.asList("c", "a", "b"));
         assertEquals(expectedList, map.keySet().stream().sorted(Comparator.comparingInt(k -> -map.get(k).size())).collect(Collectors.toList()));
+    }
+
+    @Test
+    void TestSplit() {
+
+        Pattern pattern = Pattern.compile("(L)([0]*)([0-9]*)", Pattern.CASE_INSENSITIVE);
+
+        Matcher matcher = pattern.matcher("L001");
+        matcher.matches();
+
+        assertEquals("1", matcher.group(3));
+
+        matcher = pattern.matcher("L030");
+        matcher.matches();
+
+        assertEquals("30", matcher.group(3));
+
+        matcher = pattern.matcher("L102");
+        matcher.matches();
+
+        assertEquals("102", matcher.group(3));
+
+        matcher = pattern.matcher("L099");
+        matcher.matches();
+
+        assertEquals("99", matcher.group(3));
     }
 }

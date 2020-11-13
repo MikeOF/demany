@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.rmi.RemoteException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Context {
 
@@ -52,17 +53,17 @@ public class Context {
     public final boolean index2ReverseCompliment;
     public final int mutiplexedSequenceGroupSize;
     public final int demultiplexedSequenceGroupSize;
-    public final Set<String> readTypeStrSet;
+    public final Set<String> readTypeSet;
     public final Set<String> nonIndexReadTypeStrSet;
+    public final Map<String, Map<String, Fastq>> masterFastqByReadTypeByLaneStr;
     public final Map<String, Set<SampleIdData>> sampleIdDataSetByLaneStr;
     public final Map<String, Set<SampleIndexSpec>> sampleIndexSpecSetByLaneStr;
     public final Map<String, SampleIndexLookup> sampleIndexLookupByLaneStr;
     public final Map<String, Map<String, Map<String, Fastq>>> outputFastqByReadTypeByIdByLaneStr;
 
     public Context(
+            Map<String, Map<String, Fastq>> masterFastqByReadTypeByLaneStr,
             Set<SampleIndexSpec> sampleIndexSpecSet,
-            Map<Integer, String> laneStrByLaneInt,
-            Set<String> readTypeSet,
             String index1ReadTypeStr,
             String index2ReadTypeStr,
             int index1Length,
@@ -73,14 +74,11 @@ public class Context {
     ) throws IOException {
 
         // check input
+        if (masterFastqByReadTypeByLaneStr.isEmpty()) {
+            throw new RuntimeException("the master fastq map cannot be empty");
+        }
         if (sampleIndexSpecSet.isEmpty()) {
             throw new RuntimeException("cannot have an empty sample index spec set");
-        }
-        if (laneStrByLaneInt.isEmpty()) {
-            throw new RuntimeException("cannot have an empty lane str by lane int set");
-        }
-        if (readTypeSet.isEmpty()) {
-            throw new RuntimeException("cannot have an empyt read type set");
         }
         if (index1Length < 1) {
             throw new RuntimeException("index 1 length cannot be less than 1");
@@ -103,6 +101,11 @@ public class Context {
             throw new RemoteException("mutiplexedSequenceGroupSize must be greater than -1");
         }
 
+        // get lane str by lane int map
+        Map<Integer, String> laneStrByLaneInt = getLaneStrByLaneInt(
+                new HashSet<>(masterFastqByReadTypeByLaneStr.keySet())
+        );
+
         // set simple variables
         this.hasIndex2 = index2Length == 0;
         this.index1ReadTypeStr = index1ReadTypeStr;
@@ -111,13 +114,23 @@ public class Context {
         this.index2Length = index2Length;
         this.index2ReverseCompliment = index2ReverseCompliment;
         this.outputDirPath = outputDirPath;
-        this.readTypeStrSet = Collections.unmodifiableSet(readTypeSet);
         this.mutiplexedSequenceGroupSize = mutiplexedSequenceGroupSize;
-        this.demultiplexedSequenceGroupSize = laneStrByLaneInt.size() * mutiplexedSequenceGroupSize / sampleIndexSpecSet.size();
+        this.demultiplexedSequenceGroupSize =
+                laneStrByLaneInt.size() * mutiplexedSequenceGroupSize / sampleIndexSpecSet.size();
+
+        // get the read type set from the master fastq map
+        this.readTypeSet = masterFastqByReadTypeByLaneStr.values().stream()
+                .flatMap(v -> v.keySet().stream())
+                .collect(Collectors.toUnmodifiableSet());
+
+        // vallidate and create an unmodifiable view of the master fastq map
+        this.masterFastqByReadTypeByLaneStr = getUnmodifiableMasterFastqByReadTypeByLaneStr(
+                masterFastqByReadTypeByLaneStr
+        );
 
         // create the non-index read type str set
         HashSet<String> modifiableNonIndexReadTypeStrSet = new HashSet<>();
-        for (String readTypeString : this.readTypeStrSet) {
+        for (String readTypeString : this.readTypeSet) {
             if (!readTypeString.equals(this.index1ReadTypeStr) && !readTypeString.equals(this.index2ReadTypeStr)) {
                 modifiableNonIndexReadTypeStrSet.add(readTypeString);
             }
@@ -212,11 +225,44 @@ public class Context {
         );
     }
 
+    private static Map<Integer, String> getLaneStrByLaneInt(Set<String> laneStrSet) {
+
+        Map<Integer, String> resultMap = new HashMap<>();
+        for (String laneStr : laneStrSet) {
+
+            int laneInt = Fastq.getLaneIntFromLaneStr(laneStr);
+            resultMap.put(laneInt, laneStr);
+        }
+
+        return resultMap;
+    }
+
+    private Map<String, Map<String, Fastq>> getUnmodifiableMasterFastqByReadTypeByLaneStr(
+            Map<String, Map<String, Fastq>> masterFastqByReadTypeByLaneStr) {
+
+        // first check to make sure that each lane has the known read types
+        for (String laneStr : masterFastqByReadTypeByLaneStr.keySet()) {
+
+            Set<String> thisReadTypeSet = new HashSet<>(masterFastqByReadTypeByLaneStr.get(laneStr).keySet());
+
+            if (!this.readTypeSet.equals(thisReadTypeSet)) {
+                throw new RuntimeException("not all the lanes have the same read types");
+            }
+        }
+
+        // return an unmodifiable view
+        masterFastqByReadTypeByLaneStr.replaceAll(
+                (k, v) -> Collections.unmodifiableMap(masterFastqByReadTypeByLaneStr.get(k))
+        );
+
+        return Collections.unmodifiableMap(masterFastqByReadTypeByLaneStr);
+    }
+
     private Map<String, Fastq> getUndeterminedOutputFastqByReadTypeForLane(String laneStr) {
 
         HashMap<String, Fastq> resultMap = new HashMap<>();
 
-        for (String readTypeStr : this.readTypeStrSet) {
+        for (String readTypeStr : this.readTypeSet) {
 
             resultMap.put(
                     readTypeStr,
@@ -238,7 +284,7 @@ public class Context {
         HashMap<String, Fastq> resultMap = new HashMap<>();
 
         // add a fastq to the map for each read type
-        for (String readTypeStr : this.readTypeStrSet) {
+        for (String readTypeStr : this.readTypeSet) {
 
             resultMap.put(
                     readTypeStr,

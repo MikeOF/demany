@@ -1,5 +1,6 @@
 package demany.Threading;
 
+import demany.Context;
 import demany.DataFlow.FastqReaderGroup;
 import demany.DataFlow.SequenceGroup;
 import demany.DataFlow.SequenceGroupFlow;
@@ -10,14 +11,17 @@ import java.io.IOException;
 public class ReaderThread extends Thread {
 
     private final String laneStr;
-    private final FastqReaderGroup fastqReaderGroup;
     private final SequenceGroupFlow sequenceGroupFlow;
+    private final FastqReaderGroup fastqReaderGroup;
 
-    public ReaderThread(String laneStr, FastqReaderGroup fastqReaderGroup, SequenceGroupFlow sequenceGroupFlow) {
+    public ReaderThread(String laneStr, SequenceGroupFlow sequenceGroupFlow, Context context) throws IOException {
 
         this.laneStr = laneStr;
-        this.fastqReaderGroup = fastqReaderGroup;
         this.sequenceGroupFlow = sequenceGroupFlow;
+        this.fastqReaderGroup = new FastqReaderGroup(
+                context.masterFastqByReadTypeByLaneStr.get(laneStr),
+                context.mutiplexedSequenceGroupSize
+        );
     }
 
     @Override

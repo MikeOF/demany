@@ -6,6 +6,7 @@ import demany.Utils.Utils;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Map;
 
 public class FastqReaderGroup {
 
@@ -13,7 +14,7 @@ public class FastqReaderGroup {
     public final int sequenceChunkSize;
     public boolean doneReading = false;
 
-    public FastqReaderGroup(HashMap<String, Fastq> fastqByReadType, int sequenceChunkSize) throws IOException {
+    public FastqReaderGroup(Map<String, Fastq> fastqByReadType, int sequenceChunkSize) throws IOException {
 
         // get a reader for each fastq passed in
         for (String readType : fastqByReadType.keySet()) {
