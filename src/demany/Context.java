@@ -100,7 +100,7 @@ public class Context {
         );
 
         // set simple variables
-        this.hasIndex2 = index2Length == 0;
+        this.hasIndex2 = index2Length != 0;
         this.index1Length = index1Length;
         this.index2Length = index2Length;
         this.index2ReverseCompliment = index2ReverseCompliment;
@@ -206,10 +206,6 @@ public class Context {
         }
 
         // return an unmodifiable view
-        masterFastqByReadTypeByLaneStr.replaceAll(
-                (k, v) -> Collections.unmodifiableMap(masterFastqByReadTypeByLaneStr.get(k))
-        );
-
         return Collections.unmodifiableMap(masterFastqByReadTypeByLaneStr);
     }
 

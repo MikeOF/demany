@@ -92,7 +92,7 @@ public class Demultiplex {
 
             sampleSheetBuilder.append("Sample_ID,lane,index\n");
 
-            for (int lane : laneIntSet) { sampleSheetBuilder.append("master,").append(lane).append(",index\n"); }
+            for (int lane : laneIntSet) { sampleSheetBuilder.append("master,").append(lane).append(",\n"); }
         }
 
         String sampleSheet = sampleSheetBuilder.toString();

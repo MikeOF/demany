@@ -34,9 +34,13 @@ public class FastqWriterGroup {
             for (SequenceLines sequenceLines : sequenceGroup.sequenceListByReadType.get(readType)) {
 
                 writer.write(sequenceLines.line1);
+                writer.newLine();
                 writer.write(sequenceLines.line2);
+                writer.newLine();
                 writer.write(sequenceLines.line3);
+                writer.newLine();
                 writer.write(sequenceLines.line4);
+                writer.newLine();
             }
         }
     }

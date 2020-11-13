@@ -61,6 +61,8 @@ public class ReaderThread extends Thread {
                         sequenceGroupFlow.addMultiplexedSequenceGroup(laneStr, sequenceGroup);
                     }
 
+                    if (this.fastqReaderGroup.doneReading) { break; }
+
                 } catch (IOException e) {
                     throw new RuntimeException("could not read sequences: " + e.getMessage());
                 }
