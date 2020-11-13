@@ -1,6 +1,7 @@
 package demany.DataFlow;
 
 import java.util.*;
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
@@ -18,8 +19,15 @@ public class SequenceGroupFlow {
         final Queue<HashMap<String, SequenceGroup>> sequenceGroupByIdQueue = new LinkedList<>();
     }
 
+    private final Lock readerThreadFinishedByLaneStrLock = new ReentrantLock();
     private final HashMap<String, Boolean> readerThreadFinishedByLaneStr = new HashMap<>();
+
+    private final Lock demultiplexingThreadFinishedByIdLock = new ReentrantLock();
     private final HashMap<Integer, Boolean> demultiplexingThreadFinishedById = new HashMap<>();
+
+    private final Lock writerThreadFinishedByLaneStrLock = new ReentrantLock();
+    private final HashMap<String, Boolean> writerThreadFinishedByLaneStr = new HashMap<>();
+
     private final HashMap<String, LockSequenceGroupQueuePair> multiplexedSeqGroupsByLaneStr = new HashMap<>();
     private final HashMap<String, LockSequenceGroupByIdQueuePair> demultiplexedSeqGroupsByLaneStr = new HashMap<>();
     private final int maxSequenceGroupsAllowed;
@@ -39,6 +47,11 @@ public class SequenceGroupFlow {
             this.demultiplexingThreadFinishedById.put(id, false);
         }
 
+        // create a map to store when writer threads have completed
+        for (String laneStr : laneStrSet) {
+            this.writerThreadFinishedByLaneStr.put(laneStr, false);
+        }
+
         // initialize the multiplexed sequence groups
         for (String laneStr : laneStrSet) {
 
@@ -52,19 +65,51 @@ public class SequenceGroupFlow {
     }
 
     public void markReaderThreadFinished(String laneStr) {
-        this.readerThreadFinishedByLaneStr.put(laneStr, true);
+
+        this.readerThreadFinishedByLaneStrLock.lock();
+
+        try {
+            this.readerThreadFinishedByLaneStr.put(laneStr, true);
+
+        } finally {
+            this.readerThreadFinishedByLaneStrLock.unlock();
+        }
     }
 
-    public boolean allReadThreadsFinished() {
+    public boolean allReaderThreadsFinished() {
         return this.readerThreadFinishedByLaneStr.values().stream().allMatch(Boolean::booleanValue);
     }
 
     public void markDemultiplexingThreadFinished(int demultiplexingThreadId) {
-        this.demultiplexingThreadFinishedById.put(demultiplexingThreadId, true);
+
+        this.demultiplexingThreadFinishedByIdLock.lock();
+
+        try {
+            this.demultiplexingThreadFinishedById.put(demultiplexingThreadId, true);
+
+        } finally {
+            this.demultiplexingThreadFinishedByIdLock.unlock();
+        }
     }
 
     public boolean allDemultiplexingThreadsFinished() {
         return this.demultiplexingThreadFinishedById.values().stream().allMatch(Boolean::booleanValue);
+    }
+
+    public void markWriterThreadFinished(String laneStr) {
+
+        this.writerThreadFinishedByLaneStrLock.lock();
+
+        try {
+            this.writerThreadFinishedByLaneStr.put(laneStr, true);
+
+        } finally {
+            this.writerThreadFinishedByLaneStrLock.unlock();
+        }
+    }
+
+    public boolean allWriterThreadsFinished() {
+        return this.writerThreadFinishedByLaneStr.values().stream().allMatch(Boolean::booleanValue);
     }
 
     public boolean moreMultiplexedSequenceGroupsAvailable() {

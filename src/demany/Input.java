@@ -44,13 +44,16 @@ public class Input {
         }
         this.sampleIndexSpecSet = Collections.unmodifiableSet(tempSampleIndexSpecSet);
 
-        // get the workdir path to work from
-        this.workdirPath = Paths.get(inputObject.get(Input.workdirPathKey).toString()).toAbsolutePath();
-
-        // if we are demultiplexing a bcl dir, get its path
+        // if we are demultiplexing a bcl dir, get its path and the workdir path
         if (this.program == Input.Program.DEMULTIPLEX) {
+
+            // get the workdir path to work from
+            this.workdirPath = Paths.get(inputObject.get(Input.workdirPathKey).toString()).toAbsolutePath();
             this.bclPath = Paths.get(inputObject.get(Input.bclPathKey).toString()).toAbsolutePath();
+
         } else {
+
+            this.workdirPath = null;
             this.bclPath = null;
         }
     }

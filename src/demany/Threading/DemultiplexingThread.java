@@ -66,7 +66,7 @@ public class DemultiplexingThread extends Thread {
                 Utils.tryToSleep(sleepMilliseconds);
 
                 // check to see if we are finished
-                if (sequenceGroupFlow.allReadThreadsFinished() &&
+                if (sequenceGroupFlow.allReaderThreadsFinished() &&
                         !sequenceGroupFlow.moreMultiplexedSequenceGroupsAvailable()) {
 
                     break;
@@ -112,12 +112,12 @@ public class DemultiplexingThread extends Thread {
         for (int i = 0; i < sequenceGroup.size(); i++) {
 
             // get this index lines and index strings
-            SequenceLines index1SeqLines = sequenceGroup.sequenceListByReadType.get(this.context.index1ReadTypeStr).get(i);
+            SequenceLines index1SeqLines = sequenceGroup.sequenceListByReadType.get(this.context.index1ReadType).get(i);
             String index1 = index1SeqLines.line2.substring(0, this.context.index1Length);
 
             if (this.context.hasIndex2) {
 
-                index2SeqLines = sequenceGroup.sequenceListByReadType.get(this.context.index2ReadTypeStr).get(i);
+                index2SeqLines = sequenceGroup.sequenceListByReadType.get(this.context.index2ReadType).get(i);
                 index2 = index2SeqLines.line2.substring(0, this.context.index2Length);
             }
 

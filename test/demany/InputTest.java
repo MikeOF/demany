@@ -7,7 +7,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.nio.file.Path;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 
 class InputTestHelper {
@@ -61,5 +64,27 @@ class InputTest {
 
         assertEquals("CHECK_INDICES", input.program.name());
         assertEquals(sampleIndexSpec, input.sampleIndexSpecSet.iterator().next());
+        assertNull(input.workdirPath);
+        assertNull(input.bclPath);
+    }
+
+    @Test
+    void testInputObjectConstructorDemultiplex() throws Exception {
+
+        JSONObject inputObject = InputTestHelper.createInputJSON("DEMULTIPLEX");
+        inputObject.put("workdirPath", "test/workdirPath");
+        inputObject.put("bclPath", "test/bclPath");
+        JSONObject sampleIndexJSON = TestUtil.createSampleIndexJSON(
+                "TestProject", "TestSample", "AGGGC", "TCGAA",  2
+        );
+        InputTestHelper.addSampleIndexJSON(inputObject, sampleIndexJSON);
+        SampleIndexSpec sampleIndexSpec = TestUtil.getSampleIndexSpec(sampleIndexJSON);
+
+        Input input = new Input(inputObject.toJSONString());
+
+        assertEquals("DEMULTIPLEX", input.program.name());
+        assertEquals(sampleIndexSpec, input.sampleIndexSpecSet.iterator().next());
+        assertEquals(Path.of("test/workdirPath").toAbsolutePath(), input.workdirPath);
+        assertEquals(Path.of("test/bclPath").toAbsolutePath(), input.bclPath);
     }
 }

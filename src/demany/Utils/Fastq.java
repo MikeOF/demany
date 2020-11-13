@@ -2,6 +2,7 @@ package demany.Utils;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -45,32 +46,6 @@ public class Fastq {
     public final String readTypeStr;
     public final String tail;
     public final boolean isAnIndexFastq;
-
-    public static Fastq getSampleFastqAtDir(Path dirPath, String sample, String laneStr, String readTypeStr) {
-
-        checkParentDirPath(dirPath);
-
-        return new Fastq(dirPath.resolve(getFilenameForSampleFastq(sample, laneStr, readTypeStr)));
-    }
-
-    public static Fastq getUndeterminedFastqAtDir(Path dirPath, String laneStr, String readTypeStr) {
-
-        checkParentDirPath(dirPath);
-
-        return new Fastq(dirPath.resolve(getFilenameForUndeterminedFastq(laneStr, readTypeStr)));
-    }
-
-    private static void checkParentDirPath(Path dirPath) {
-
-        // check path
-        if (!dirPath.isAbsolute()) {
-            throw new RuntimeException("dirPath must be absolute");
-        }
-
-        if (!Files.isDirectory(dirPath)) {
-            throw new RuntimeException("dirPath must be an existant directory");
-        }
-    }
 
     public Fastq(Path path) throws RuntimeException {
 
@@ -144,6 +119,24 @@ public class Fastq {
         return path.hashCode();
     }
 
+    public static Fastq getSampleFastqAtDir(Path dirPath, String sample, String laneStr, String readTypeStr) {
+
+        checkParentDirPath(dirPath);
+
+        return new Fastq(dirPath.resolve(getFilenameForSampleFastq(sample, laneStr, readTypeStr)));
+    }
+
+    public static Fastq getUndeterminedFastqAtDir(Path dirPath, String laneStr, String readTypeStr) {
+
+        checkParentDirPath(dirPath);
+
+        return new Fastq(dirPath.resolve(getFilenameForUndeterminedFastq(laneStr, readTypeStr)));
+    }
+
+    public static FilenameFilter getFastqFilenameFilter() {
+        return (dir, name) -> name.toLowerCase().endsWith("fastq.gz");
+    }
+
     public static int getLaneIntFromLaneStr(String laneStr) {
 
         Matcher matcher = Fastq.laneStrPattern.matcher(laneStr);
@@ -155,54 +148,15 @@ public class Fastq {
         return Integer.parseInt(matcher.group(3));
     }
 
-    public static HashMap<String, Fastq> mapFastqsByReadType(Set<Fastq> fastqSet) {
+    private static void checkParentDirPath(Path dirPath) {
 
-        HashMap<String, Fastq> resultMap = new HashMap<>(fastqSet.size());
-
-        for (Fastq fastq : fastqSet) {
-
-            if (resultMap.containsKey(fastq.readTypeStr)) {
-                throw new RuntimeException("two fastqs have the same read type string");
-            }
-
-            resultMap.put(fastq.readTypeStr, fastq);
+        // check path
+        if (!dirPath.isAbsolute()) {
+            throw new RuntimeException("dirPath must be absolute");
         }
 
-        return resultMap;
-    }
-
-    public static ArrayList<HashSet<Fastq>> groupFastqsByFirstReadId(Set<Fastq> fastqSet) throws IOException {
-
-        // first group the fastqs
-        HashMap<String, HashSet<Fastq>> fastqSetByFirstReadId = new HashMap<>();
-
-        for (Fastq fastq : fastqSet) {
-
-            String firstReadId = fastq.getFirstReadID();
-
-            if (!fastqSetByFirstReadId.containsKey(firstReadId)) {
-                fastqSetByFirstReadId.put(firstReadId, new HashSet<>());
-            }
-
-            fastqSetByFirstReadId.get(firstReadId).add(fastq);
+        if (!Files.isDirectory(dirPath)) {
+            throw new RuntimeException("dirPath must be an existant directory");
         }
-
-        // now convert the map to an array and return
-        return new ArrayList<>(fastqSetByFirstReadId.values());
-    }
-
-    public static ArrayList<HashMap<String, Fastq>> groupFastqsByReadTypeByFirstReadId(Set<Fastq> fastqSet) throws IOException {
-
-        // first group the fastqs by readId
-        ArrayList<HashSet<Fastq>> fastqForReadIdSetList = groupFastqsByFirstReadId(fastqSet);
-
-        // now group those group by their read types
-        ArrayList<HashMap<String, Fastq>> resultList = new ArrayList<>();
-        for (Set<Fastq> fastqSetForReadId : fastqForReadIdSetList) {
-
-            resultList.addAll(groupFastqsByReadTypeByFirstReadId(fastqSetForReadId));
-        }
-
-        return resultList;
     }
 }

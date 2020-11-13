@@ -46,15 +46,15 @@ public class Context {
     public static final String undeterminedId = "undetermined";
     public final boolean hasIndex2;
     public final Path outputDirPath;
-    public final String index1ReadTypeStr;
-    public final String index2ReadTypeStr;
+    public final String index1ReadType;
+    public final String index2ReadType;
     public final int index1Length;
     public final int index2Length;
     public final boolean index2ReverseCompliment;
     public final int mutiplexedSequenceGroupSize;
     public final int demultiplexedSequenceGroupSize;
     public final Set<String> readTypeSet;
-    public final Set<String> nonIndexReadTypeStrSet;
+    public final Set<String> nonIndexReadTypeSet;
     public final Map<String, Map<String, Fastq>> masterFastqByReadTypeByLaneStr;
     public final Map<String, Set<SampleIdData>> sampleIdDataSetByLaneStr;
     public final Map<String, Set<SampleIndexSpec>> sampleIndexSpecSetByLaneStr;
@@ -64,8 +64,6 @@ public class Context {
     public Context(
             Map<String, Map<String, Fastq>> masterFastqByReadTypeByLaneStr,
             Set<SampleIndexSpec> sampleIndexSpecSet,
-            String index1ReadTypeStr,
-            String index2ReadTypeStr,
             int index1Length,
             int index2Length,
             boolean index2ReverseCompliment,
@@ -92,11 +90,6 @@ public class Context {
         if (index2ReverseCompliment && index2Length == 0) {
             throw new RuntimeException("if index 2 is reverse compliment it cannot be of length 0");
         }
-        if ((index2ReadTypeStr == null && index2Length != 0) || (index2ReadTypeStr != null && index2Length < 1)) {
-            throw new RuntimeException(
-                    "index 2 read type must be null if index 2 length is 0 and non-null if index 2 length < 1"
-            );
-        }
         if (mutiplexedSequenceGroupSize < 0) {
             throw new RemoteException("mutiplexedSequenceGroupSize must be greater than -1");
         }
@@ -108,8 +101,6 @@ public class Context {
 
         // set simple variables
         this.hasIndex2 = index2Length == 0;
-        this.index1ReadTypeStr = index1ReadTypeStr;
-        this.index2ReadTypeStr = index2ReadTypeStr;
         this.index1Length = index1Length;
         this.index2Length = index2Length;
         this.index2ReverseCompliment = index2ReverseCompliment;
@@ -118,36 +109,116 @@ public class Context {
         this.demultiplexedSequenceGroupSize =
                 laneStrByLaneInt.size() * mutiplexedSequenceGroupSize / sampleIndexSpecSet.size();
 
-        // get the read type set from the master fastq map
+        // get an unmodifiable view of a read type set from the master fastq map
         this.readTypeSet = masterFastqByReadTypeByLaneStr.values().stream()
                 .flatMap(v -> v.keySet().stream())
                 .collect(Collectors.toUnmodifiableSet());
 
-        // vallidate and create an unmodifiable view of the master fastq map
+        // determine index read types
+        String[] indexReadTypes = getIndexReadTypes();
+        this.index1ReadType = indexReadTypes[0];
+        if (hasIndex2) { this.index2ReadType = indexReadTypes[1]; }
+        else { this.index2ReadType = null; }
+
+        // vallidate and set an unmodifiable view of the master fastq map
         this.masterFastqByReadTypeByLaneStr = getUnmodifiableMasterFastqByReadTypeByLaneStr(
                 masterFastqByReadTypeByLaneStr
         );
 
-        // create the non-index read type str set
-        HashSet<String> modifiableNonIndexReadTypeStrSet = new HashSet<>();
-        for (String readTypeString : this.readTypeSet) {
-            if (!readTypeString.equals(this.index1ReadTypeStr) && !readTypeString.equals(this.index2ReadTypeStr)) {
-                modifiableNonIndexReadTypeStrSet.add(readTypeString);
+        // set unmodifiable view of a non-index read type map on this context instance
+        this.nonIndexReadTypeSet = this.readTypeSet.stream()
+                .filter(v -> !this.index1ReadType.equals(v))
+                .filter(v -> this.index2ReadType == null || !this.index2ReadType.equals(v))
+                .collect(Collectors.toUnmodifiableSet());
+
+        // set unmodifiable views of sample id data and sample index spec maps on this context instance
+        this.sampleIdDataSetByLaneStr = getUnmodifiableSampleIdDataSetByLaneStr(sampleIndexSpecSet, laneStrByLaneInt);
+        this.sampleIndexSpecSetByLaneStr = getUnmodifiableSampleIndexSpecSetByLaneStr(
+                sampleIndexSpecSet, laneStrByLaneInt
+        );
+
+        // set an unmodifiable view of an sample index lookup by lane map on this context instance
+        this.sampleIndexLookupByLaneStr = getUnmodifiableLookupByLantStr(laneStrByLaneInt);
+
+        // set an unmodifiable view of an output fastq map on this context intance
+        this.outputFastqByReadTypeByIdByLaneStr = getUnmodifiableOutputFastqByReadTypeByIdByLaneStr(laneStrByLaneInt);
+    }
+
+    private static Map<Integer, String> getLaneStrByLaneInt(Set<String> laneStrSet) {
+
+        Map<Integer, String> resultMap = new HashMap<>();
+        for (String laneStr : laneStrSet) {
+
+            int laneInt = Fastq.getLaneIntFromLaneStr(laneStr);
+            resultMap.put(laneInt, laneStr);
+        }
+
+        return resultMap;
+    }
+
+    private String[] getIndexReadTypes() {
+
+        if (this.hasIndex2) {
+
+            if (!this.readTypeSet.contains(Fastq.INDEX_1_READ_TYPE_STR) ||
+                    !this.readTypeSet.contains(Fastq.INDEX_2_READ_TYPE_STR)) {
+
+                throw new RuntimeException(
+                        "dual index read type set does not contain the expected index 1 and index 2 read types, " +
+                                readTypeSet.toString()
+                );
+            }
+
+            return new String[]{Fastq.INDEX_1_READ_TYPE_STR, Fastq.INDEX_2_READ_TYPE_STR};
+
+        } else {
+
+            if (!this.readTypeSet.contains(Fastq.INDEX_1_READ_TYPE_STR)) {
+
+                throw new RuntimeException(
+                        "single index read type set does not contain the expected index 1 read type, " +
+                                readTypeSet.toString()
+                );
+            }
+
+            if (this.readTypeSet.contains(Fastq.INDEX_2_READ_TYPE_STR)) {
+
+                throw new RuntimeException(
+                        "single index read type set contains the index 2 read type, " + readTypeSet.toString()
+                );
+            }
+
+            return new String[]{Fastq.INDEX_1_READ_TYPE_STR};
+        }
+    }
+
+    private Map<String, Map<String, Fastq>> getUnmodifiableMasterFastqByReadTypeByLaneStr(
+            Map<String, Map<String, Fastq>> masterFastqByReadTypeByLaneStr) {
+
+        // first check to make sure that each lane has the known read types
+        for (String laneStr : masterFastqByReadTypeByLaneStr.keySet()) {
+
+            Set<String> thisReadTypeSet = new HashSet<>(masterFastqByReadTypeByLaneStr.get(laneStr).keySet());
+
+            if (!this.readTypeSet.equals(thisReadTypeSet)) {
+                throw new RuntimeException("not all the lanes have the same read types");
             }
         }
-        this.nonIndexReadTypeStrSet = Collections.unmodifiableSet(modifiableNonIndexReadTypeStrSet);
 
-        // create the sample id data and sample index spec maps
+        // return an unmodifiable view
+        masterFastqByReadTypeByLaneStr.replaceAll(
+                (k, v) -> Collections.unmodifiableMap(masterFastqByReadTypeByLaneStr.get(k))
+        );
+
+        return Collections.unmodifiableMap(masterFastqByReadTypeByLaneStr);
+    }
+
+    private static Map<String, Set<SampleIdData>> getUnmodifiableSampleIdDataSetByLaneStr(
+            Set<SampleIndexSpec> sampleIndexSpecSet, Map<Integer, String> laneStrByLaneInt) {
+
+        // create the sample id data map
         Map<String, Set<SampleIdData>> modifiableSampleIdDataSetByLaneStr = new HashMap<>();
-        Map<String, Set<SampleIndexSpec>> modifiableSampleIndexSpecSetByLaneStr = new HashMap<>();
-        for (SampleIndexSpec sampleIndexSpec : sampleIndexSpecSet) {
-
-            // create the sample data
-            SampleIdData sampleIdData = new SampleIdData(
-                    Utils.getIdForProjectSample(sampleIndexSpec.project, sampleIndexSpec.sample),
-                    sampleIndexSpec.project,
-                    sampleIndexSpec.sample
-            );
+        for (SampleIndexSpec sampleIndexSpec :sampleIndexSpecSet) {
 
             // get the lane string for this sample index's lane int
             String laneStr = laneStrByLaneInt.get(sampleIndexSpec.lane);
@@ -155,25 +226,51 @@ public class Context {
             // add sets to maps if necessary
             if (!modifiableSampleIdDataSetByLaneStr.containsKey(laneStr)) {
                 modifiableSampleIdDataSetByLaneStr.put(laneStr, new HashSet<>());
+            }
+
+            // add sample id data and index spec to maps, duplicate adds are idempotent
+            modifiableSampleIdDataSetByLaneStr.get(laneStr).add(
+                    new SampleIdData(
+                            Utils.getIdForProjectSample(sampleIndexSpec.project, sampleIndexSpec.sample),
+                            sampleIndexSpec.project,
+                            sampleIndexSpec.sample
+                    )
+            );
+        }
+
+        // set unmodifiable views of the sample maps on this context intance
+        modifiableSampleIdDataSetByLaneStr.replaceAll((k,v)->Collections.unmodifiableSet(v));
+
+        return Collections.unmodifiableMap(modifiableSampleIdDataSetByLaneStr);
+    }
+
+    private static Map<String, Set<SampleIndexSpec>> getUnmodifiableSampleIndexSpecSetByLaneStr(
+            Set<SampleIndexSpec> sampleIndexSpecSet, Map<Integer, String> laneStrByLaneInt) {
+
+        // create the sample index spec map
+        Map<String, Set<SampleIndexSpec>> modifiableSampleIndexSpecSetByLaneStr = new HashMap<>();
+        for (SampleIndexSpec sampleIndexSpec :sampleIndexSpecSet) {
+
+            // get the lane string for this sample index's lane int
+            String laneStr = laneStrByLaneInt.get(sampleIndexSpec.lane);
+
+            // add set to map if necessary
+            if (!modifiableSampleIndexSpecSetByLaneStr.containsKey(laneStr)) {
                 modifiableSampleIndexSpecSetByLaneStr.put(laneStr, new HashSet<>());
             }
 
-            // add sample id data and index spec to maps
-            modifiableSampleIdDataSetByLaneStr.get(laneStr).add(sampleIdData); // duplicate adds are okay
+            // add sample index spec to map
             modifiableSampleIndexSpecSetByLaneStr.get(laneStr).add(sampleIndexSpec);
         }
 
         // set unmodifiable views of the sample maps on this context intance
-        modifiableSampleIdDataSetByLaneStr.replaceAll(
-                (k, v) -> Collections.unmodifiableSet(modifiableSampleIdDataSetByLaneStr.get(k))
-        );
-        modifiableSampleIndexSpecSetByLaneStr.replaceAll(
-                (k, v) -> Collections.unmodifiableSet(modifiableSampleIndexSpecSetByLaneStr.get(k))
-        );
-        this.sampleIdDataSetByLaneStr = Collections.unmodifiableMap(modifiableSampleIdDataSetByLaneStr);
-        this.sampleIndexSpecSetByLaneStr = Collections.unmodifiableMap(modifiableSampleIndexSpecSetByLaneStr);
+        modifiableSampleIndexSpecSetByLaneStr.replaceAll((k,v)->Collections.unmodifiableSet(v));
 
-        // create the lookup by lane str map
+        return Collections.unmodifiableMap(modifiableSampleIndexSpecSetByLaneStr);
+    }
+
+    private Map<String, SampleIndexLookup> getUnmodifiableLookupByLantStr(Map<Integer, String> laneStrByLaneInt) {
+
         Map<String, SampleIndexLookup> modifiableSampleIndexLookupByLaneStr = new HashMap<>();
         for (String laneStr : laneStrByLaneInt.values()) {
 
@@ -188,10 +285,13 @@ public class Context {
             );
         }
 
-        // set an unmodifiable view of the sample index lookup by lane map on this context instance
-        this.sampleIndexLookupByLaneStr = Collections.unmodifiableMap(modifiableSampleIndexLookupByLaneStr);
+        return Collections.unmodifiableMap(modifiableSampleIndexLookupByLaneStr);
+    }
 
-        // create the map of output fastqs
+    private Map<String, Map<String, Map<String, Fastq>>> getUnmodifiableOutputFastqByReadTypeByIdByLaneStr(
+            Map<Integer, String> laneStrByLaneInt) throws IOException {
+
+        // create the map
         Map<String, Map<String, Map<String, Fastq>>> modifiableOutputFastqByReadTypeByIdByLaneStr = new HashMap<>();
         for (String laneStr : laneStrByLaneInt.values()) {
 
@@ -219,43 +319,8 @@ public class Context {
             );
         }
 
-        // set an unmodifiable view of the output fastq map on this context intance
-        this.outputFastqByReadTypeByIdByLaneStr = Collections.unmodifiableMap(
-                modifiableOutputFastqByReadTypeByIdByLaneStr
-        );
-    }
-
-    private static Map<Integer, String> getLaneStrByLaneInt(Set<String> laneStrSet) {
-
-        Map<Integer, String> resultMap = new HashMap<>();
-        for (String laneStr : laneStrSet) {
-
-            int laneInt = Fastq.getLaneIntFromLaneStr(laneStr);
-            resultMap.put(laneInt, laneStr);
-        }
-
-        return resultMap;
-    }
-
-    private Map<String, Map<String, Fastq>> getUnmodifiableMasterFastqByReadTypeByLaneStr(
-            Map<String, Map<String, Fastq>> masterFastqByReadTypeByLaneStr) {
-
-        // first check to make sure that each lane has the known read types
-        for (String laneStr : masterFastqByReadTypeByLaneStr.keySet()) {
-
-            Set<String> thisReadTypeSet = new HashSet<>(masterFastqByReadTypeByLaneStr.get(laneStr).keySet());
-
-            if (!this.readTypeSet.equals(thisReadTypeSet)) {
-                throw new RuntimeException("not all the lanes have the same read types");
-            }
-        }
-
         // return an unmodifiable view
-        masterFastqByReadTypeByLaneStr.replaceAll(
-                (k, v) -> Collections.unmodifiableMap(masterFastqByReadTypeByLaneStr.get(k))
-        );
-
-        return Collections.unmodifiableMap(masterFastqByReadTypeByLaneStr);
+        return Collections.unmodifiableMap(modifiableOutputFastqByReadTypeByIdByLaneStr);
     }
 
     private Map<String, Fastq> getUndeterminedOutputFastqByReadTypeForLane(String laneStr) {

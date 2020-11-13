@@ -65,7 +65,7 @@ public class WriterThread extends Thread {
                 Utils.tryToSleep(sleepMilliseconds);
 
                 // check to see if we are finished
-                if (this.sequenceGroupFlow.allReadThreadsFinished() &&
+                if (this.sequenceGroupFlow.allReaderThreadsFinished() &&
                         this.sequenceGroupFlow.allDemultiplexingThreadsFinished() &&
                         !this.sequenceGroupFlow.moreDemultiplexedSequenceGroupsAvailable()) {
 
@@ -81,5 +81,8 @@ public class WriterThread extends Thread {
                 if (sleepMilliseconds > 20) { sleepMilliseconds = sleepMilliseconds - 10; }
             }
         }
+
+        // mark that this thread has finished
+        this.sequenceGroupFlow.markWriterThreadFinished(this.laneStr);
     }
 }
