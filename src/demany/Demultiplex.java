@@ -15,6 +15,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.rmi.RemoteException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
@@ -22,6 +24,11 @@ import java.util.stream.Collectors;
 public class Demultiplex {
 
     static int ExecuteDemultiplex(Input input) throws IOException, SAXException, ParserConfigurationException, InterruptedException {
+
+        // print time
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
+        LocalDateTime now = LocalDateTime.now();
+        System.out.println("Start of Process " + dtf.format(now));
 
         // check input
         if (input.sampleIndexSpecSet.isEmpty()) {
@@ -59,7 +66,7 @@ public class Demultiplex {
         // demultiplex the master fastqs
         demultiplexMasterFastqs(input, bclParameters, masterFastqByReadTypeByLaneStr, index2ReverseCompliment);
 
-        System.out.println("process complete");
+        System.out.println("End of Process " + dtf.format(now));
 
         return 0;
     }

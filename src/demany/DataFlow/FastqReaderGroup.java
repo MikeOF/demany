@@ -57,7 +57,7 @@ public class FastqReaderGroup {
                 if (sequenceLines.isNull()) {
                     this.doneReading = true;
                     reader.close();
-                    continue;
+                    break;
                 }
 
                 // add the sequence to the sequence group that we are reading
