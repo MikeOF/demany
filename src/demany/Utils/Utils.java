@@ -21,15 +21,15 @@ public class Utils {
         return new BufferedWriter(encoder);
     }
 
-    public static String getIdForProjectSample(String project, String sample) {
-        return project + "-" + sample;
+    public static BufferedWriter getBufferedGzippedByteArrayWriter(int initialByteSize) throws IOException {
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(initialByteSize);
+        OutputStream gzipOutputStream = new GZIPOutputStream(byteArrayOutputStream);
+        Writer writer = new OutputStreamWriter(gzipOutputStream);
+        return new BufferedWriter(writer);
     }
 
-    public static void tryToSleep(long sleepMilliseconds) {
-        try {
-            Thread.sleep(sleepMilliseconds);
-        } catch (InterruptedException e) {
-            throw new RuntimeException("could not sleep: " + e.getMessage());
-        }
+    public static void tryToSleep() {
+        try { Thread.sleep(10); }
+        catch (InterruptedException e) { throw new RuntimeException("could not sleep: " + e.getMessage()); }
     }
 }

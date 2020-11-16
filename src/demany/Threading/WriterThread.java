@@ -10,8 +10,12 @@ import demany.Utils.Utils;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class WriterThread extends Thread {
+
+    private static final Logger LOGGER = Logger.getLogger( WriterThread.class.getName() );
 
     private final String laneStr;
     private final SequenceGroupFlow sequenceGroupFlow;
@@ -34,8 +38,6 @@ public class WriterThread extends Thread {
 
     @Override
     public void run() {
-
-        long sleepMilliseconds = 100;
 
         while(true) {
             boolean didWork = false;
@@ -62,7 +64,7 @@ public class WriterThread extends Thread {
             if (!didWork) {
 
                 // sleep a bit
-                Utils.tryToSleep(sleepMilliseconds);
+                Utils.tryToSleep();
 
                 // check to see if we are finished
                 if (this.sequenceGroupFlow.allReaderThreadsFinished() &&
@@ -72,13 +74,6 @@ public class WriterThread extends Thread {
                     break;
                 }
 
-                // increase sleep milliseconds
-                sleepMilliseconds = (sleepMilliseconds + 10);
-
-            } else {
-
-                // decrease sleep milliseconds
-                if (sleepMilliseconds > 20) { sleepMilliseconds = sleepMilliseconds - 10; }
             }
         }
 

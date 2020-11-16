@@ -226,11 +226,7 @@ public class Context {
 
             // add sample id data and index spec to maps, duplicate adds are idempotent
             modifiableSampleIdDataSetByLaneStr.get(laneStr).add(
-                    new SampleIdData(
-                            Utils.getIdForProjectSample(sampleIndexSpec.project, sampleIndexSpec.sample),
-                            sampleIndexSpec.project,
-                            sampleIndexSpec.sample
-                    )
+                    new SampleIdData(sampleIndexSpec.id, sampleIndexSpec.project, sampleIndexSpec.sample)
             );
         }
 

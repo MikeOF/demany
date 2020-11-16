@@ -10,11 +10,11 @@ public class SequenceGroup {
     private boolean completed = false;
     private int size = 0;
 
-    public SequenceGroup(Set<String> readTypeSet, int size) {
+    public SequenceGroup(Set<String> readTypeSet, int numberOfSequencesExpected) {
 
         for (String readType : readTypeSet) {
 
-            sequenceListByReadType.put(readType, new ArrayList<>(size));
+            sequenceListByReadType.put(readType, new ArrayList<>(numberOfSequencesExpected));
         }
     }
 

@@ -15,8 +15,7 @@ public class SampleIndexLookup {
         HashSet<String> index2KeySet;
 
         ProjectSampleIdIndex2KeySetPair(SampleIndexSpec sampleIndexSpec, HashSet<String> index2KeySet) {
-            this.id = Utils.getIdForProjectSample(sampleIndexSpec.project, sampleIndexSpec.sample);
-            this.index2KeySet = index2KeySet;
+            this.id = sampleIndexSpec.id; this.index2KeySet = index2KeySet;
         }
     }
 

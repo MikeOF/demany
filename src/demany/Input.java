@@ -13,10 +13,21 @@ import java.util.Set;
 
 public class Input {
 
+    // key values
     static final String programKey = "program";
     static final String sampleIndexSpecArrayKey = "sampleIndexSpecArray";
     static final String workdirPathKey = "workdirPath";
     static final String bclPathKey = "bclPath";
+    static final String demultiplexingThreadNumberKey = "demultiplexingThreadNumber";
+    static final String sequenceChunkSizeKey = "sequenceChunkSize";
+    static final String sequenceChunkQueueSizeKey = "sequenceChunkQueueSize";
+
+    // default values
+    public static final int demultiplexingThreadNumberDefault = -1;
+    public static final int sequenceChunkSizeDefault = 10000;
+    public static final int sequenceChunkQueueSizeDefault = 20;
+
+    // Note: a demultiplexingThreadNumberDefault of -1 means that there will be 1 demultiplexing thread per lane
 
     public enum Program { CHECK_INDICES, DEMULTIPLEX }
 
@@ -24,6 +35,9 @@ public class Input {
     public final Set<SampleIndexSpec> sampleIndexSpecSet;
     public final Path workdirPath;
     public final Path bclPath;
+    public final int demultiplexingThreadNumber;
+    public final int sequenceChunkSize;
+    public final int sequenceChunkQueueSize;
 
     public Input(String jsonInput) throws Exception {
 
@@ -51,10 +65,38 @@ public class Input {
             this.workdirPath = Paths.get(inputObject.get(Input.workdirPathKey).toString()).toAbsolutePath();
             this.bclPath = Paths.get(inputObject.get(Input.bclPathKey).toString()).toAbsolutePath();
 
+            // get the demultiplexing Thread Number
+            if (inputObject.containsKey(Input.demultiplexingThreadNumberKey)) {
+                this.demultiplexingThreadNumber = Integer.parseInt(
+                        inputObject.get(Input.demultiplexingThreadNumberKey).toString()
+                );
+            } else {
+                this.demultiplexingThreadNumber = Input.demultiplexingThreadNumberDefault;
+            }
+
+            // get the sequence chunk size
+            if (inputObject.containsKey(Input.sequenceChunkSizeKey)) {
+                this.sequenceChunkSize = Integer.parseInt(inputObject.get(Input.sequenceChunkSizeKey).toString());
+            } else {
+                this.sequenceChunkSize = Input.sequenceChunkSizeDefault;
+            }
+
+            // get the sequence chunk queue size
+            if (inputObject.containsKey(Input.sequenceChunkQueueSizeKey)) {
+                this.sequenceChunkQueueSize = Integer.parseInt(
+                        inputObject.get(Input.sequenceChunkQueueSizeKey).toString()
+                );
+            } else {
+                this.sequenceChunkQueueSize = Input.sequenceChunkQueueSizeDefault;
+            }
+
         } else {
 
             this.workdirPath = null;
             this.bclPath = null;
+            this.demultiplexingThreadNumber = 0;
+            this.sequenceChunkSize = 0;
+            this.sequenceChunkQueueSize = 0;
         }
     }
 }

@@ -15,8 +15,7 @@ public class SequenceLines {
         this.line4 = line4;
     }
 
-    public boolean isNull() {
-        // here we are assuming that if line 4 is null then all others are null
-        return this.line4 == null;
+    public boolean allLinesAreNull() {
+        return this.line1 == null && this.line2 == null && this.line3 == null && this.line4 == null;
     }
 }

@@ -4,6 +4,7 @@ import org.json.simple.JSONObject;
 
 public class SampleIndexSpec {
 
+    public final String id;
     public final String project;
     public final String sample;
     public final String index1;
@@ -13,17 +14,20 @@ public class SampleIndexSpec {
     public SampleIndexSpec(JSONObject jsonObject) throws Exception {
 
         try {
-            project = jsonObject.get("project").toString();
-            sample = jsonObject.get("sample").toString();
-            index1 = jsonObject.get("index1").toString();
+            this.project = jsonObject.get("project").toString();
+            this.sample = jsonObject.get("sample").toString();
+            this.index1 = jsonObject.get("index1").toString();
+
+            this.id = this.project + "-" + this.sample;
 
             if (jsonObject.get("index2") == null) {
-                index2 = null;
+                this.index2 = null;
             } else {
-                index2 = jsonObject.get("index2").toString();
+                this.index2 = jsonObject.get("index2").toString();
             }
 
-            lane = Integer.parseInt(jsonObject.get("lane").toString());
+            this.lane = Integer.parseInt(jsonObject.get("lane").toString());
+
         } catch (Exception e) {
             throw new Exception(String.format("Could not parse sample index from JSON: %s", jsonObject.toJSONString()));
         }

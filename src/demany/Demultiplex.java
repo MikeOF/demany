@@ -14,21 +14,19 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.rmi.RemoteException;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.stream.Collector;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 public class Demultiplex {
 
+    private static final Logger LOGGER = Logger.getLogger( Demultiplex.class.getName() );
+
     static int ExecuteDemultiplex(Input input) throws IOException, SAXException, ParserConfigurationException, InterruptedException {
 
         // print time
-        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
-        LocalDateTime now = LocalDateTime.now();
-        System.out.println("Start of Process " + dtf.format(now));
+        LOGGER.log(Level.INFO," ---- Start of Process ----");
 
         // check input
         if (input.sampleIndexSpecSet.isEmpty()) {
@@ -66,7 +64,7 @@ public class Demultiplex {
         // demultiplex the master fastqs
         demultiplexMasterFastqs(input, bclParameters, masterFastqByReadTypeByLaneStr, index2ReverseCompliment);
 
-        System.out.println("End of Process " + dtf.format(now));
+        LOGGER.log(Level.INFO," ---- End of Process ----");
 
         return 0;
     }
@@ -105,8 +103,7 @@ public class Demultiplex {
         String sampleSheet = sampleSheetBuilder.toString();
 
         // log and write the sample sheet
-        System.out.println("sample sheet\n");
-        System.out.println(sampleSheet);
+        LOGGER.log(Level.INFO, "Sample Sheet\n\n{0}", sampleSheet);
 
         BufferedWriter writer = Files.newBufferedWriter(sampleSheetPath);
         writer.write(sampleSheet);
@@ -122,6 +119,7 @@ public class Demultiplex {
         ProcessBuilder builder = new ProcessBuilder();
         builder.command(
                 "bcl2fastq",
+                "--min-log-level", "WARNING",
                 "--minimum-trimmed-read-length", Integer.toString(minTrimmedReadLength),
                 "--mask-short-adapter-reads", Integer.toString(minTrimmedReadLength),
                 "--create-fastq-for-index-reads",
@@ -144,7 +142,7 @@ public class Demultiplex {
         Process process = builder.start();
         int exitCode = process.waitFor();
 
-        System.out.println("bcl2fastq completed with exit code: " + exitCode);
+        LOGGER.log(Level.INFO, "bcl2fastq completed with exit code: {0}", exitCode);
 
         if (exitCode != 0) { throw new RuntimeException("bcl2fastq return a non-zero exit code"); }
 
@@ -202,11 +200,6 @@ public class Demultiplex {
                                                 Map<String, Map<String, Fastq>> masterFastqByReadTypeByLaneStr,
                                                 boolean index2ReverseCompliment) throws IOException, InterruptedException {
 
-        // some run parameters to extract later
-        int numDemultiplexingThreads = 9;
-        int maxSequenceGroupsAllowed = 6;
-        int multiplexedSequenceGroupSize = 100000;
-
         // create the output dir
         Path outputDirPath = input.workdirPath.resolve("demultiplexed-fastqs");
         Files.createDirectory(outputDirPath);
@@ -219,8 +212,12 @@ public class Demultiplex {
                 bclParameters.index2Length,
                 index2ReverseCompliment,
                 outputDirPath,
-                multiplexedSequenceGroupSize
+                input.sequenceChunkSize
         );
+
+        // resolve the number of demultiplexing threads we need
+        int numDemultiplexingThreads = input.demultiplexingThreadNumber;
+        if (numDemultiplexingThreads == -1) { numDemultiplexingThreads = masterFastqByReadTypeByLaneStr.size(); }
 
         // get a set of ids for demultiplexing threads
         Set<Integer> demultiplexingThreadIdSet = new HashSet<>();
@@ -229,7 +226,7 @@ public class Demultiplex {
         // create a sequence group flow
         SequenceGroupFlow sequenceGroupFlow = new SequenceGroupFlow(
                 new HashSet<>(masterFastqByReadTypeByLaneStr.keySet()),
-                maxSequenceGroupsAllowed,
+                input.sequenceChunkQueueSize,
                 demultiplexingThreadIdSet
         );
 

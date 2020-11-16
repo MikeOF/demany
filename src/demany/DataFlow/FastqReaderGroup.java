@@ -31,30 +31,31 @@ public class FastqReaderGroup {
     public SequenceGroup readSequences() throws IOException {
 
         // make sure we haven't already finished reading
-        if (doneReading) {
-            throw new RuntimeException("cannot read sequences after we're done reading");
-        }
+        if (this.doneReading) { throw new RuntimeException("cannot read sequences after we're done reading"); }
 
         // create the sequence group that we will be reading in
-        SequenceGroup sequenceGroup = new SequenceGroup(readerByReadType.keySet(), sequenceChunkSize);
+        SequenceGroup sequenceGroup = new SequenceGroup(this.readerByReadType.keySet(), this.sequenceChunkSize);
 
         // read in sequences from each reader
-        for (String readType : readerByReadType.keySet()) {
+        for (String readType : this.readerByReadType.keySet()) {
 
-            BufferedReader reader = readerByReadType.get(readType);
+            BufferedReader reader = this.readerByReadType.get(readType);
 
-            for (int i = 0; i < sequenceChunkSize; i++) {
+            for (int i = 0; i < this.sequenceChunkSize; i++) {
 
                 // read in a sequence, ie 4 lines, from a fastq
                 SequenceLines sequenceLines = new SequenceLines(
-                        reader.readLine(),
-                        reader.readLine(),
-                        reader.readLine(),
-                        reader.readLine()
+                        reader.readLine(), reader.readLine(), reader.readLine(), reader.readLine()
                 );
 
                 // check to see if we are done reading
-                if (sequenceLines.isNull()) {
+                if (sequenceLines.line1 == null) {
+
+                    // make sure that all lines are null
+                    if (!sequenceLines.allLinesAreNull()) {
+                        throw new RuntimeException("a partial set of 4 sequence lines was read");
+                    }
+
                     this.doneReading = true;
                     reader.close();
                     break;

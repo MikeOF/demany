@@ -7,8 +7,12 @@ import demany.DataFlow.SequenceGroupFlow;
 import demany.Utils.Utils;
 
 import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ReaderThread extends Thread {
+
+    private static final Logger LOGGER = Logger.getLogger( ReaderThread.class.getName() );
 
     private final String laneStr;
     private final SequenceGroupFlow sequenceGroupFlow;
@@ -26,8 +30,6 @@ public class ReaderThread extends Thread {
 
     @Override
     public void run() {
-
-        long sleepMilliseconds = 100;
 
         while (!fastqReaderGroup.doneReading) {
             boolean didWork = false;
@@ -71,15 +73,7 @@ public class ReaderThread extends Thread {
             if (!didWork) {
 
                 // sleep a bit
-                Utils.tryToSleep(sleepMilliseconds);
-
-                // increase sleep milliseconds
-                sleepMilliseconds = (sleepMilliseconds + 10);
-
-            } else {
-
-                // decrease sleep milliseconds
-                if (sleepMilliseconds > 20) { sleepMilliseconds = sleepMilliseconds - 10; }
+                Utils.tryToSleep();
             }
         }
 
