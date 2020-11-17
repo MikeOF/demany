@@ -10,11 +10,19 @@ import java.util.zip.GZIPOutputStream;
 
 public class CompressedSequenceGroup {
 
+    private static class BufferedWriterCountPair {
+
+        final BufferedWriter bufferedWriter;
+        int count = 0;
+
+        BufferedWriterCountPair(BufferedWriter bufferedWriter) { this.bufferedWriter = bufferedWriter; }
+    }
+
     public final HashMap<String, ByteArrayOutputStream> byteArrayByReadType = new HashMap<>();
-    public final HashMap<String, GZIPOutputStream> gzipOutputStreamByReadType = new HashMap<>();
-    public final HashMap<String, BufferedWriter> bufferedWriterByReadType = new HashMap<>();
+    private final HashMap<String, GZIPOutputStream> gzipOutputStreamByReadType = new HashMap<>();
+    private final HashMap<String, BufferedWriterCountPair> bufferedWriterCountByReadType = new HashMap<>();
     private boolean completed = false;
-    private boolean sequencesWritten = false;
+    private int sequencesWritten = 0;
 
     public CompressedSequenceGroup(Set<String> readTypeSet) throws IOException {
 
@@ -32,7 +40,7 @@ public class CompressedSequenceGroup {
             this.gzipOutputStreamByReadType.put(readType, gzipOutputStream);
 
             // store the buffered writer
-            this.bufferedWriterByReadType.put(readType, bufferedWriter);
+            this.bufferedWriterCountByReadType.put(readType, new BufferedWriterCountPair(bufferedWriter));
         }
     }
 
@@ -40,29 +48,42 @@ public class CompressedSequenceGroup {
 
         if (this.completed) { throw new RuntimeException("cannot add sequence lines to a completed sequence group"); }
 
-        BufferedWriter writer = this.bufferedWriterByReadType.get(readType);
+        BufferedWriterCountPair pair = this.bufferedWriterCountByReadType.get(readType);
+        BufferedWriter writer = pair.bufferedWriter;
 
-        writer.write(sequenceLines.line1);
-        writer.newLine();
+        writer.write(sequenceLines.line1); writer.newLine();
 
-        writer.write(sequenceLines.line2);
-        writer.newLine();
+        writer.write(sequenceLines.line2); writer.newLine();
 
-        writer.write(sequenceLines.line3);
-        writer.newLine();
+        writer.write(sequenceLines.line3); writer.newLine();
 
-        writer.write(sequenceLines.line4);
-        writer.newLine();
+        writer.write(sequenceLines.line4); writer.newLine();
 
-        this.sequencesWritten = true;
+        pair.count++;
     }
 
     public void markCompleted() throws IOException {
 
         if (this.completed) { throw new RuntimeException("a sequence group should not be marked completed twice"); }
 
-        // flush all the writers
-        for (BufferedWriter writer : this.bufferedWriterByReadType.values()) { writer.flush(); }
+        // flush all the writers and check the number of sequences written to each
+        int sequencesWritten = -1;
+        for (BufferedWriterCountPair pair : this.bufferedWriterCountByReadType.values()) {
+
+            // check the number of sequences written
+            if (sequencesWritten == -1) {
+                sequencesWritten = pair.count;
+
+            } else if (sequencesWritten != pair.count) {
+
+                throw new RuntimeException(
+                        "a compressed sequence group with different number of sequences written cannot be completed"
+                );
+            }
+
+            // flush the writer
+            pair.bufferedWriter.flush();
+        }
 
         // finish all the gzip output streams
         for (GZIPOutputStream gzipOutputStream : this.gzipOutputStreamByReadType.values()) {
@@ -70,9 +91,10 @@ public class CompressedSequenceGroup {
         }
 
         this.completed = true;
+        this.sequencesWritten = sequencesWritten;
     }
 
     public boolean isCompleted() { return this.completed; }
 
-    public boolean isEmpty() { return !this.sequencesWritten; }
+    public boolean isEmpty() { return this.sequencesWritten > 0; }
 }
