@@ -11,7 +11,6 @@ import demany.Utils.Utils;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class DemultiplexingThread extends Thread {
@@ -50,17 +49,19 @@ public class DemultiplexingThread extends Thread {
 
                         if (sequenceGroup == null) { continue; }  // try nex lane
 
-                        // demultiplex this sequence group
                         try {
+
+                            // demultiplex this sequence group
                             HashMap<String, CompressedSequenceGroup> compressedSequenceGroupById = demultiplexSequenceGroup(
                                     laneStr, sequenceGroup
                             );
+
+                            // put the demultiplexed sequence groups in their out queues
+                            sequenceGroupFlow.addDemultiplexedSequenceGroups(laneStr, compressedSequenceGroupById);
+
                         } catch (IOException e) {
                             throw new RuntimeException("could not create the compressed sequence group by id: " + e.getMessage());
                         }
-
-                        // put the demultiplexed sequence groups in their out queues
-                        sequenceGroupFlow.addDemultiplexedSequenceGroups(laneStr, compressedSequenceGroupById);
 
                         // mark that we did work
                         didWork = true;
@@ -93,14 +94,12 @@ public class DemultiplexingThread extends Thread {
         HashMap<String, CompressedSequenceGroup> compressedSequenceGroupById = new HashMap<>();
 
         compressedSequenceGroupById.put(
-                Context.undeterminedId,
-                new CompressedSequenceGroup(this.context.readTypeSet)
+                Context.undeterminedId, new CompressedSequenceGroup(this.context.readTypeSet)
         );
 
         for (Context.SampleIdData sampleIdData : this.context.sampleIdDataSetByLaneStr.get(laneStr)) {
             compressedSequenceGroupById.put(
-                    sampleIdData.id,
-                    new CompressedSequenceGroup(this.context.readTypeSet)
+                    sampleIdData.id, new CompressedSequenceGroup(this.context.readTypeSet)
             );
         }
 
@@ -143,6 +142,7 @@ public class DemultiplexingThread extends Thread {
 
             seqGroup.markCompleted();
 
+            if (seqGroup.isEmpty()) { compressedSequenceGroupById.remove(id); }
         }
 
         return compressedSequenceGroupById;

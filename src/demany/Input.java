@@ -24,8 +24,8 @@ public class Input {
 
     // default values
     public static final int demultiplexingThreadNumberDefault = -1;
-    public static final int sequenceChunkSizeDefault = 10000;
-    public static final int sequenceChunkQueueSizeDefault = 20;
+    public static final int sequenceChunkSizeDefault = 20000;
+    public static final int sequenceChunkQueueSizeDefault = 5;
 
     // Note: a demultiplexingThreadNumberDefault of -1 means that there will be 1 demultiplexing thread per lane
 

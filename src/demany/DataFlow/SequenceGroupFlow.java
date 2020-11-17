@@ -16,7 +16,7 @@ public class SequenceGroupFlow {
     static class LockSequenceGroupByIdQueuePair {
 
         final ReentrantLock lock = new ReentrantLock();
-        final Queue<HashMap<String, SequenceGroup>> sequenceGroupByIdQueue = new LinkedList<>();
+        final Queue<HashMap<String, CompressedSequenceGroup>> compressedSequenceGroupByIdQueue = new LinkedList<>();
     }
 
     private final Lock readerThreadFinishedByLaneStrLock = new ReentrantLock();
@@ -196,7 +196,7 @@ public class SequenceGroupFlow {
         for (String laneStr : this.demultiplexedSeqGroupsByLaneStr.keySet()) {
 
             // lock not needed
-            if (!this.demultiplexedSeqGroupsByLaneStr.get(laneStr).sequenceGroupByIdQueue.isEmpty())  {
+            if (!this.demultiplexedSeqGroupsByLaneStr.get(laneStr).compressedSequenceGroupByIdQueue.isEmpty())  {
                 return true;
             }
         }
@@ -209,10 +209,10 @@ public class SequenceGroupFlow {
         LockSequenceGroupByIdQueuePair pair = this.demultiplexedSeqGroupsByLaneStr.get(laneStr);
 
         // lock not needed
-        return pair.sequenceGroupByIdQueue.size() < this.maxSequenceGroupsAllowed;
+        return pair.compressedSequenceGroupByIdQueue.size() < this.maxSequenceGroupsAllowed;
     }
 
-    public void addDemultiplexedSequenceGroups(String laneStr, HashMap<String, SequenceGroup> sequenceGroupById) {
+    public void addDemultiplexedSequenceGroups(String laneStr, HashMap<String, CompressedSequenceGroup> compressedSequenceGroupById) {
 
         LockSequenceGroupByIdQueuePair pair = this.demultiplexedSeqGroupsByLaneStr.get(laneStr);
 
@@ -221,14 +221,14 @@ public class SequenceGroupFlow {
 
         try {
 
-            pair.sequenceGroupByIdQueue.add(sequenceGroupById);
+            pair.compressedSequenceGroupByIdQueue.add(compressedSequenceGroupById);
 
         } finally {
             pair.lock.unlock();
         }
     }
 
-    public HashMap<String, SequenceGroup> takeDemultiplexedSequenceGroups(String laneStr) {
+    public HashMap<String, CompressedSequenceGroup> takeDemultiplexedSequenceGroups(String laneStr) {
 
         LockSequenceGroupByIdQueuePair pair = this.demultiplexedSeqGroupsByLaneStr.get(laneStr);
 
@@ -238,11 +238,9 @@ public class SequenceGroupFlow {
 
         try {
 
-            if (pair.sequenceGroupByIdQueue.isEmpty()) {
-                return null;
-            }
+            if (pair.compressedSequenceGroupByIdQueue.isEmpty()) { return null; }
 
-            return pair.sequenceGroupByIdQueue.remove();
+            return pair.compressedSequenceGroupByIdQueue.remove();
 
         } finally {
             pair.lock.unlock();

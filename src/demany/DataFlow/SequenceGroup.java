@@ -7,8 +7,8 @@ import java.util.Set;
 public class SequenceGroup {
 
     public final HashMap<String, ArrayList<SequenceLines>> sequenceListByReadType = new HashMap<>();
-    private boolean completed = false;
     private int size = 0;
+    private boolean completed = false;
 
     public SequenceGroup(Set<String> readTypeSet, int numberOfSequencesExpected) {
 

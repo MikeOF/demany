@@ -26,7 +26,7 @@ public class Demultiplex {
     static int ExecuteDemultiplex(Input input) throws IOException, SAXException, ParserConfigurationException, InterruptedException {
 
         // print time
-        LOGGER.log(Level.INFO," ---- Start of Process ----");
+        LOGGER.log(Level.INFO,"\n\n ---- Start of Process ----\n");
 
         // check input
         if (input.sampleIndexSpecSet.isEmpty()) {
@@ -64,7 +64,7 @@ public class Demultiplex {
         // demultiplex the master fastqs
         demultiplexMasterFastqs(input, bclParameters, masterFastqByReadTypeByLaneStr, index2ReverseCompliment);
 
-        LOGGER.log(Level.INFO," ---- End of Process ----");
+        LOGGER.log(Level.INFO,"\n\n ---- End of Process ----\n");
 
         return 0;
     }
@@ -103,7 +103,7 @@ public class Demultiplex {
         String sampleSheet = sampleSheetBuilder.toString();
 
         // log and write the sample sheet
-        LOGGER.log(Level.INFO, "Sample Sheet\n\n{0}", sampleSheet);
+        LOGGER.log(Level.INFO, "\n\nSample Sheet:\n\n{0}", sampleSheet);
 
         BufferedWriter writer = Files.newBufferedWriter(sampleSheetPath);
         writer.write(sampleSheet);
@@ -114,6 +114,11 @@ public class Demultiplex {
         if (bclParameters.hasIndex2) {
             minTrimmedReadLength = Math.min(bclParameters.index1Length, bclParameters.index2Length);
         }
+
+        // determine the number of threads to use
+        int pthreads = input.demultiplexingThreadNumber;
+        int iothreads = pthreads / 3;
+        if (iothreads == 0) { iothreads = 1; }
 
         // define the process
         ProcessBuilder builder = new ProcessBuilder();
@@ -132,9 +137,9 @@ public class Demultiplex {
                 "--stats-dir", statsDirPath.toString(),
                 "--reports-dir", reportsDirPath.toString(),
                 "--output-dir", outputDirPath.toString(),
-                "-p", "12",
-                "-r", "6",
-                "-w", "6"
+                "-p", Integer.toString(pthreads),
+                "-r", Integer.toString(iothreads),
+                "-w", Integer.toString(iothreads)
         );
         builder.inheritIO();
 

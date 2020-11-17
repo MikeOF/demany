@@ -21,6 +21,10 @@ public class Utils {
         return new BufferedWriter(encoder);
     }
 
+    public static FileOutputStream getFileOutputStream(Path path) throws IOException {
+        return new FileOutputStream(path.toString());
+    }
+
     public static BufferedWriter getBufferedGzippedByteArrayWriter(int initialByteSize) throws IOException {
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(initialByteSize);
         OutputStream gzipOutputStream = new GZIPOutputStream(byteArrayOutputStream);

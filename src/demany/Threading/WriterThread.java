@@ -1,6 +1,7 @@
 package demany.Threading;
 
 import demany.Context;
+import demany.DataFlow.CompressedSequenceGroup;
 import demany.DataFlow.FastqWriterGroup;
 import demany.DataFlow.SequenceGroup;
 import demany.DataFlow.SequenceGroupFlow;
@@ -43,16 +44,16 @@ public class WriterThread extends Thread {
             boolean didWork = false;
 
             // attempt to take a collection of sequence groups
-            HashMap<String, SequenceGroup> sequenceGroupById =
+            HashMap<String, CompressedSequenceGroup> compressedSequenceGroupById =
                     this.sequenceGroupFlow.takeDemultiplexedSequenceGroups(this.laneStr);
 
             // write sequences if we got em
-            if (sequenceGroupById != null) {
+            if (compressedSequenceGroupById != null) {
 
-                for (String id : sequenceGroupById.keySet()) {
+                for (String id : compressedSequenceGroupById.keySet()) {
 
                     try {
-                        this.fastqWriterGroupById.get(id).writeSequences(sequenceGroupById.get(id));
+                        this.fastqWriterGroupById.get(id).writeSequences(compressedSequenceGroupById.get(id));
                     } catch (IOException e) {
                         throw new RuntimeException("could not write sequences: " + e.getMessage());
                     }
