@@ -4,7 +4,6 @@ import demany.SampleIndex.SampleIndexKeyMappingCollection;
 import demany.SampleIndex.SampleIndexLookup;
 import demany.SampleIndex.SampleIndexSpec;
 import demany.Utils.Fastq;
-import demany.Utils.Utils;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -45,7 +44,7 @@ public class Context {
 
     public static final String undeterminedId = "undetermined";
     public final boolean hasIndex2;
-    public final Path outputDirPath;
+    public final Path demultiplexedFastqsDirPath;
     public final String index1ReadType;
     public final String index2ReadType;
     public final int index1Length;
@@ -67,7 +66,7 @@ public class Context {
             int index1Length,
             int index2Length,
             boolean index2ReverseCompliment,
-            Path outputDirPath,
+            Path demultiplexedFastqsDirPath,
             int mutiplexedSequenceGroupSize
     ) throws IOException {
 
@@ -84,7 +83,7 @@ public class Context {
         if (index2Length < 0) {
             throw new RuntimeException("index 2 length cannot be less than 0");
         }
-        if (!Files.isDirectory(outputDirPath) || !outputDirPath.isAbsolute()) {
+        if (!Files.isDirectory(demultiplexedFastqsDirPath) || !demultiplexedFastqsDirPath.isAbsolute()) {
             throw new RuntimeException("output dir path must be an absolute path to an existant directory");
         }
         if (index2ReverseCompliment && index2Length == 0) {
@@ -104,7 +103,7 @@ public class Context {
         this.index1Length = index1Length;
         this.index2Length = index2Length;
         this.index2ReverseCompliment = index2ReverseCompliment;
-        this.outputDirPath = outputDirPath;
+        this.demultiplexedFastqsDirPath = demultiplexedFastqsDirPath;
         this.mutiplexedSequenceGroupSize = mutiplexedSequenceGroupSize;
         this.demultiplexedSequenceGroupSize =
                 laneStrByLaneInt.size() * mutiplexedSequenceGroupSize / sampleIndexSpecSet.size();
@@ -323,7 +322,7 @@ public class Context {
 
             resultMap.put(
                     readTypeStr,
-                    Fastq.getUndeterminedFastqAtDir(this.outputDirPath, laneStr, readTypeStr)
+                    Fastq.getUndeterminedFastqAtDir(this.demultiplexedFastqsDirPath, laneStr, readTypeStr)
             );
         }
 
@@ -334,7 +333,7 @@ public class Context {
             throws IOException {
 
         // create the dir for this sample
-        Path sampleOutputDir = this.outputDirPath.resolve(sampleIdData.project).resolve(sampleIdData.sample);
+        Path sampleOutputDir = this.demultiplexedFastqsDirPath.resolve(sampleIdData.project).resolve(sampleIdData.sample);
         Files.createDirectories(sampleOutputDir);
 
         // create the fastq by id map

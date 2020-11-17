@@ -147,8 +147,6 @@ public class Demultiplex {
         Process process = builder.start();
         int exitCode = process.waitFor();
 
-        LOGGER.log(Level.INFO, "bcl2fastq completed with exit code: {0}", exitCode);
-
         if (exitCode != 0) { throw new RuntimeException("bcl2fastq return a non-zero exit code"); }
 
         return outputDirPath;
@@ -205,9 +203,11 @@ public class Demultiplex {
                                                 Map<String, Map<String, Fastq>> masterFastqByReadTypeByLaneStr,
                                                 boolean index2ReverseCompliment) throws IOException, InterruptedException {
 
-        // create the output dir
-        Path outputDirPath = input.workdirPath.resolve("demultiplexed-fastqs");
-        Files.createDirectory(outputDirPath);
+        // create the output dirs
+        Path demultiplexedFastqsDirPath = input.workdirPath.resolve("demultiplexed-fastqs");
+        Files.createDirectory(demultiplexedFastqsDirPath);
+        Path indexCountsDirPath = input.workdirPath.resolve("index-counts");
+        Files.createDirectory(indexCountsDirPath);
 
         // create the context of this demultiplexing process
         Context context = new Context(
@@ -216,7 +216,7 @@ public class Demultiplex {
                 bclParameters.index1Length,
                 bclParameters.index2Length,
                 index2ReverseCompliment,
-                outputDirPath,
+                demultiplexedFastqsDirPath,
                 input.sequenceChunkSize
         );
 
@@ -256,5 +256,6 @@ public class Demultiplex {
 
         // wait on the writer threads which should be the last to complete
         for (WriterThread writerThread : writerThreadList) { writerThread.join(); }
+
     }
 }

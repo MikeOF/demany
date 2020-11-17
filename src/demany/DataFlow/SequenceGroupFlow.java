@@ -30,6 +30,10 @@ public class SequenceGroupFlow {
 
     private final HashMap<String, LockSequenceGroupQueuePair> multiplexedSeqGroupsByLaneStr = new HashMap<>();
     private final HashMap<String, LockSequenceGroupByIdQueuePair> demultiplexedSeqGroupsByLaneStr = new HashMap<>();
+
+    private final Lock countByIndexStrByIdByLaneStrLock = new ReentrantLock();
+    private final HashMap<String, HashMap<String, HashMap<String, Long>>> countByIndexStrByIdByLaneStr = new HashMap<>();
+
     private final int maxSequenceGroupsAllowed;
 
     public SequenceGroupFlow(Set<String> laneStrSet, int maxSequenceGroupsAllowed,
@@ -232,7 +236,6 @@ public class SequenceGroupFlow {
 
         LockSequenceGroupByIdQueuePair pair = this.demultiplexedSeqGroupsByLaneStr.get(laneStr);
 
-
         // block until we get the lock on the queue
         pair.lock.lock();
 
@@ -245,5 +248,58 @@ public class SequenceGroupFlow {
         } finally {
             pair.lock.unlock();
         }
+    }
+
+    public void submitCountByIndexStrByIdByLaneStr(
+            HashMap<String, HashMap<String, HashMap<String, Long>>> inCountByIndexStrByIdByLaneStr) {
+
+        // block until we get the lock on the map
+        this.countByIndexStrByIdByLaneStrLock.lock();
+
+        try {
+
+            for (String laneStr : inCountByIndexStrByIdByLaneStr.keySet()) {
+
+                // add map for this lane if necessary
+                if (!this.countByIndexStrByIdByLaneStr.containsKey(laneStr)) {
+                    this.countByIndexStrByIdByLaneStr.put(laneStr, new HashMap<>());
+                }
+
+                // get the maps for this lane str
+                HashMap<String, HashMap<String, Long>> thisCountByIndexStrById =
+                        this.countByIndexStrByIdByLaneStr.get(laneStr);
+
+                HashMap<String, HashMap<String, Long>> inCountByIndexStrById =
+                        inCountByIndexStrByIdByLaneStr.get(laneStr);
+
+                for (String id : inCountByIndexStrById.keySet()) {
+
+                    // add map for this id if necessary
+                    if (!thisCountByIndexStrById.containsKey(id)) { thisCountByIndexStrById.put(id, new HashMap<>()); }
+
+                    // get the maps for this id
+                    HashMap<String, Long> thisCountByIndexStr = thisCountByIndexStrById.get(id);
+
+                    HashMap<String, Long> inCountByIndexStr = inCountByIndexStrById.get(id);
+
+                    for (String indexStr : inCountByIndexStr.keySet()) {
+
+                        // record count for this index string
+                        if (!thisCountByIndexStr.containsKey(indexStr)) {
+                            thisCountByIndexStr.put(indexStr, inCountByIndexStr.get(indexStr));
+                        } else {
+                            thisCountByIndexStr.put(
+                                    indexStr,
+                                    thisCountByIndexStr.get(indexStr) + inCountByIndexStr.get(indexStr)
+                            );
+                        }
+                    }
+                }
+            }
+
+        } finally {
+            this.countByIndexStrByIdByLaneStrLock.unlock();
+        }
+
     }
 }

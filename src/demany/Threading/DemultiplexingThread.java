@@ -17,6 +17,7 @@ public class DemultiplexingThread extends Thread {
 
     private static final Logger LOGGER = Logger.getLogger( DemultiplexingThread.class.getName() );
 
+    final HashMap<String, HashMap<String, HashMap<String, Long>>> countByIndexStrByIdByLaneStr = new HashMap<>();
     final int demultiplexingThreadId;
     final SequenceGroupFlow sequenceGroupFlow;
     final Context context;
@@ -26,6 +27,17 @@ public class DemultiplexingThread extends Thread {
         this.demultiplexingThreadId = demultiplexingThreadId;
         this.sequenceGroupFlow = sequenceGroupFlow;
         this.context = context;
+
+        // initialize the count by index str by id map
+        for (String laneStr : context.sampleIdDataSetByLaneStr.keySet()) {
+
+            this.countByIndexStrByIdByLaneStr.put(laneStr, new HashMap<>());
+
+            for (Context.SampleIdData sampleIdData : context.sampleIdDataSetByLaneStr.get(laneStr)) {
+
+                this.countByIndexStrByIdByLaneStr.get(laneStr).put(sampleIdData.id, new HashMap<>());
+            }
+        }
     }
 
     @Override
@@ -84,6 +96,9 @@ public class DemultiplexingThread extends Thread {
             }
         }
 
+        // submit this threads index counts to the sequence group flow
+        this.sequenceGroupFlow.submitCountByIndexStrByIdByLaneStr(this.countByIndexStrByIdByLaneStr);
+
         // mark that this thread has finished on the sequence group flow
         this.sequenceGroupFlow.markDemultiplexingThreadFinished(this.demultiplexingThreadId);
     }
@@ -102,6 +117,9 @@ public class DemultiplexingThread extends Thread {
                     sampleIdData.id, new CompressedSequenceGroup(this.context.readTypeSet)
             );
         }
+
+        // get the count by index-str by id for this lane
+        HashMap<String, HashMap<String, Long>> countByIndexStrById = this.countByIndexStrByIdByLaneStr.get(laneStr);
 
         // get the lookup for this lane
         SampleIndexLookup lookup = context.sampleIndexLookupByLaneStr.get(laneStr);
@@ -124,6 +142,7 @@ public class DemultiplexingThread extends Thread {
             // lookup the sample id
             String sampleId = lookup.lookupProjectSampleId(index1, index2);
 
+            // set the undetermined id if we didn't find a sample id
             if (sampleId == null) { sampleId = Context.undeterminedId; }
 
             // add lines to sequence group
@@ -132,6 +151,20 @@ public class DemultiplexingThread extends Thread {
                         readTypeString,
                         sequenceGroup.sequenceListByReadType.get(readTypeString).get(i)
                 );
+            }
+
+            // get the count by index str map for this sample id
+            HashMap<String, Long> countByIndexStr = countByIndexStrById.get(sampleId);
+
+            // get the index string
+            String indexStr;
+            if (this.context.hasIndex2) { indexStr = index1 + "-" + index2; } else { indexStr = index1; }
+
+            // record the index count
+            if (!countByIndexStr.containsKey(indexStr)) {
+                countByIndexStr.put(indexStr, 1L);
+            } else {
+                countByIndexStr.put(indexStr, countByIndexStr.get(indexStr) + 1L);
             }
         }
 
