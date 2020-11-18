@@ -9,9 +9,13 @@ import demany.SampleIndex.SampleIndexLookup;
 import demany.Utils.Utils;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 public class DemultiplexingThread extends Thread {
 
@@ -32,6 +36,8 @@ public class DemultiplexingThread extends Thread {
         for (String laneStr : context.sampleIdDataSetByLaneStr.keySet()) {
 
             this.countByIndexStrByIdByLaneStr.put(laneStr, new HashMap<>());
+
+            this.countByIndexStrByIdByLaneStr.get(laneStr).put(Context.undeterminedId, new HashMap<>());
 
             for (Context.SampleIdData sampleIdData : context.sampleIdDataSetByLaneStr.get(laneStr)) {
 
@@ -168,14 +174,16 @@ public class DemultiplexingThread extends Thread {
             }
         }
 
-        // prune and complete sequence group map
+        // mark each sequence group complete
         for (String id : compressedSequenceGroupById.keySet()) {
 
-            CompressedSequenceGroup seqGroup = compressedSequenceGroupById.get(id);
+            compressedSequenceGroupById.get(id).markCompleted();
+        }
 
-            seqGroup.markCompleted();
+        // remove empty compressed sequence groups
+        for (String id : compressedSequenceGroupById.keySet().toArray(new String[0])) {
 
-            if (seqGroup.isEmpty()) { compressedSequenceGroupById.remove(id); }
+            if (compressedSequenceGroupById.get(id).isEmpty()) { compressedSequenceGroupById.remove(id); }
         }
 
         return compressedSequenceGroupById;

@@ -96,5 +96,12 @@ public class CompressedSequenceGroup {
 
     public boolean isCompleted() { return this.completed; }
 
-    public boolean isEmpty() { return this.sequencesWritten > 0; }
+    public boolean isEmpty() {
+
+        if (!this.completed) {
+            throw new RuntimeException("a sequence group's empty status should only be queried once it is completed");
+        }
+
+        return this.sequencesWritten < 1;
+    }
 }

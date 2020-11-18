@@ -1,20 +1,27 @@
 package demany;
 
 import demany.DataFlow.SequenceGroupFlow;
+import demany.DataFlow.SequenceLines;
+import demany.SampleIndex.SampleIndexKeyMappingCollection;
+import demany.SampleIndex.SampleIndexLookup;
+import demany.SampleIndex.SampleIndexSpec;
 import demany.Threading.DemultiplexingThread;
 import demany.Threading.ReaderThread;
 import demany.Threading.WriterThread;
 import demany.Utils.BCLParameters;
 import demany.Utils.Fastq;
+import demany.Utils.Utils;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.ParserConfigurationException;
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -23,10 +30,11 @@ public class Demultiplex {
 
     private static final Logger LOGGER = Logger.getLogger( Demultiplex.class.getName() );
 
-    static int ExecuteDemultiplex(Input input) throws IOException, SAXException, ParserConfigurationException, InterruptedException {
+    static int ExecuteDemultiplex(Input input)
+            throws IOException, SAXException, ParserConfigurationException, InterruptedException {
 
         // print time
-        LOGGER.log(Level.INFO,"\n\n ---- Start of Process ----\n");
+        LOGGER.log(Level.INFO,"\n\n ---- Start of Demultiplexing Process ----\n");
 
         // check input
         if (input.sampleIndexSpecSet.isEmpty()) {
@@ -58,13 +66,20 @@ public class Demultiplex {
                 bcl2fastqOutputDirPath
         );
 
-        // determine if index 2 is reverse compliment
-        boolean index2ReverseCompliment = false;
+        // determine the index 2 is reverse compliment parameter
+        boolean index2ReverseCompliment = determineIndex2ReverseCompliment(
+                input, bclParameters, masterFastqByReadTypeByLaneStr
+        );
+
+        // determined the demultiplexing context
+        Context context = determineDemultiplexingContext(
+                input, bclParameters, masterFastqByReadTypeByLaneStr, index2ReverseCompliment
+        );
 
         // demultiplex the master fastqs
-        demultiplexMasterFastqs(input, bclParameters, masterFastqByReadTypeByLaneStr, index2ReverseCompliment);
+        demultiplexMasterFastqs(input, context);
 
-        LOGGER.log(Level.INFO,"\n\n ---- End of Process ----\n");
+        LOGGER.log(Level.INFO,"\n\n ---- End of Demultiplexing Process ----\n");
 
         return 0;
     }
@@ -87,7 +102,7 @@ public class Demultiplex {
 
         sampleSheetBuilder.append("[Data]\n");
 
-        if (bclParameters.hasIndex2) {
+        if (bclParameters.hasIndex2 && input.sampleSpecSetHasIndex2) {
 
             sampleSheetBuilder.append("Sample_ID,lane,index,index2\n");
 
@@ -194,14 +209,194 @@ public class Demultiplex {
             }
         }
 
-        // create and return an unmodifiable view
-        resultMap.replaceAll((k,v) -> Collections.unmodifiableMap(resultMap.get(k)));
-        return Collections.unmodifiableMap(resultMap);
+        // create an unmodifiable view
+        resultMap.replaceAll((k,v)->Collections.unmodifiableMap(v));
+        resultMap = Collections.unmodifiableMap(resultMap);
+
+        return resultMap;
     }
 
-    private static void demultiplexMasterFastqs(Input input, BCLParameters bclParameters,
-                                                Map<String, Map<String, Fastq>> masterFastqByReadTypeByLaneStr,
-                                                boolean index2ReverseCompliment) throws IOException, InterruptedException {
+    private static boolean determineIndex2ReverseCompliment(
+            Input input, BCLParameters bclParameters, Map<String, Map<String, Fastq>> masterFastqByReadTypeByLaneStr) throws IOException {
+
+        // check input
+        if (!input.sampleSpecSetHasIndex2 || bclParameters.hasIndex2) { return false; }
+
+        // make sure that the index 2 read type is in each lane
+        if (!masterFastqByReadTypeByLaneStr.values().stream().allMatch(v->v.containsKey(Fastq.INDEX_2_READ_TYPE_STR))) {
+            throw new RuntimeException("master fastq map doesn't have an index 2 read type in each lane");
+        }
+
+        // get lane str by lane int
+        Map<Integer, String> laneStrByLaneInt = masterFastqByReadTypeByLaneStr.keySet().stream()
+                .collect(Collectors.toMap(Fastq::getLaneIntFromLaneStr, Function.identity()));
+
+        // get sample index specs by lane
+        Map<String, Set<SampleIndexSpec>> sampleIndexSpecSetByLaneStr = new HashMap<>();
+        for (SampleIndexSpec sampleIndexSpec : input.sampleIndexSpecSet) {
+
+            String laneStr = laneStrByLaneInt.get(sampleIndexSpec.lane);
+            if (!sampleIndexSpecSetByLaneStr.containsKey(laneStr)) {
+                sampleIndexSpecSetByLaneStr.put(laneStr, new HashSet<>());
+            }
+
+            sampleIndexSpecSetByLaneStr.get(laneStr).add(sampleIndexSpec);
+        }
+
+        // now sample reads from each lane
+        Map<String, Integer> undeterminedCountByIndexStr = new HashMap<>();
+        Map<String, Integer> forwardFindCountByIndexStr = new HashMap<>();
+        Map<String, Integer> revCompFindCountByIndexStr = new HashMap<>();
+        for (String laneStr : masterFastqByReadTypeByLaneStr.keySet()) {
+
+            // get the sample index key mapping collection
+            SampleIndexKeyMappingCollection sampleIndexKeyMappingCollection = new SampleIndexKeyMappingCollection(
+                    sampleIndexSpecSetByLaneStr.get(laneStr),
+                    bclParameters.index1Length,
+                    bclParameters.index2Length
+            );
+
+            // get the sample index lookups
+            SampleIndexLookup forwardLookup = new SampleIndexLookup(
+                    sampleIndexKeyMappingCollection, false
+            );
+            SampleIndexLookup revCompLookup = new SampleIndexLookup(
+                    sampleIndexKeyMappingCollection, false
+            );
+
+            // get the index fastqs
+            Fastq index1Fastq = masterFastqByReadTypeByLaneStr.get(laneStr).get(Fastq.INDEX_1_READ_TYPE_STR);
+            Fastq index2Fastq = masterFastqByReadTypeByLaneStr.get(laneStr).get(Fastq.INDEX_2_READ_TYPE_STR);
+
+            // create index fastq readers
+            BufferedReader index1Reader = Utils.getBufferedGzippedFileReader(index1Fastq.path);
+            BufferedReader index2Reader = Utils.getBufferedGzippedFileReader(index2Fastq.path);
+
+            for (int i = 0; i < 1000000; i++) {
+
+                // read lines
+                SequenceLines index1SequenceLines = new SequenceLines(
+                        index1Reader.readLine(),
+                        index1Reader.readLine(),
+                        index1Reader.readLine(),
+                        index1Reader.readLine()
+                );
+
+                SequenceLines index2SequenceLines = new SequenceLines(
+                        index2Reader.readLine(),
+                        index2Reader.readLine(),
+                        index2Reader.readLine(),
+                        index2Reader.readLine()
+                );
+
+                // break if we are done reading
+                if (index1SequenceLines.line1 == null) {
+                    if (!index1SequenceLines.allLinesAreNull() || !index2SequenceLines.allLinesAreNull()) {
+                        throw new RuntimeException(
+                                "read incomplete sets of lines from index fastqs for lane " + laneStr
+                        );
+                    }
+                    break;
+                }
+
+                // get the index string to record the count
+                String indexStr = index1SequenceLines.line2 + "-" + index2SequenceLines.line2;
+
+                // get the lookup results
+                String forwardResult = forwardLookup.lookupProjectSampleId(
+                        index1SequenceLines.line2, index2SequenceLines.line2
+                );
+
+                String revCompResult = revCompLookup.lookupProjectSampleId(
+                        index1SequenceLines.line2, index2SequenceLines.line2
+                );
+
+                // record the lookup results
+                if (forwardResult == null && revCompResult == null) {
+
+                    if (!undeterminedCountByIndexStr.containsKey(indexStr)) {
+                        undeterminedCountByIndexStr.put(indexStr, 1);
+
+                    } else {
+                        undeterminedCountByIndexStr.put(indexStr, undeterminedCountByIndexStr.get(indexStr) + 1);
+                    }
+                }
+
+                if (forwardResult != null) {
+
+                    if (!forwardFindCountByIndexStr.containsKey(indexStr)) {
+                        forwardFindCountByIndexStr.put(indexStr, 1);
+
+                    } else {
+                        forwardFindCountByIndexStr.put(indexStr, forwardFindCountByIndexStr.get(indexStr) + 1);
+                    }
+                }
+
+                if (revCompResult != null) {
+
+                    if (!revCompFindCountByIndexStr.containsKey(indexStr)) {
+                        revCompFindCountByIndexStr.put(indexStr, 1);
+
+                    } else {
+                        revCompFindCountByIndexStr.put(indexStr, forwardFindCountByIndexStr.get(indexStr) + 1);
+                    }
+                }
+            }
+        }
+
+        // get total counts
+        int forwardFindCount = forwardFindCountByIndexStr.values().stream().reduce(0, Integer::sum);
+        int revCompFindCount = revCompFindCountByIndexStr.values().stream().reduce(0, Integer::sum);
+        int totalfindCount = forwardFindCount + revCompFindCount;
+
+        // check the signal
+        int majorFindCount = Math.max(forwardFindCount, revCompFindCount);
+        double majorToTotalRatio = majorFindCount / (double) totalfindCount;
+
+        if (majorToTotalRatio < .8) {
+
+
+            // create error message
+            StringBuilder errorStringBuilder = new StringBuilder();
+
+            errorStringBuilder.append(
+                    "ratio of greater find count to total was less than .8, sequence orientation of index 2 is " +
+                            "ambiguous\n"
+            );
+
+            errorStringBuilder.append("Undetermined Index Str Counts\n");
+
+            undeterminedCountByIndexStr.keySet().stream()
+                    .sorted(Comparator.comparingInt(a -> -undeterminedCountByIndexStr.get(a)))
+                    .collect(Collectors.toList())
+                    .subList(0, 5)
+                    .forEach(s -> errorStringBuilder.append(s).append(": ").append(undeterminedCountByIndexStr.get(s)).append("\n"));
+
+            errorStringBuilder.append("Forward Index Str Counts\n");
+
+            forwardFindCountByIndexStr.keySet().stream()
+                    .sorted(Comparator.comparingInt(a -> -forwardFindCountByIndexStr.get(a)))
+                    .collect(Collectors.toList())
+                    .subList(0, 5)
+                    .forEach(s -> errorStringBuilder.append(s).append(": ").append(forwardFindCountByIndexStr.get(s)).append("\n"));
+
+            errorStringBuilder.append("Reverse Compliment Index Str Counts\n");
+
+            revCompFindCountByIndexStr.keySet().stream()
+                    .sorted(Comparator.comparingInt(a -> -revCompFindCountByIndexStr.get(a)))
+                    .collect(Collectors.toList())
+                    .subList(0, 5)
+                    .forEach(s -> errorStringBuilder.append(s).append(": ").append(revCompFindCountByIndexStr.get(s)).append("\n"));
+
+            throw new RuntimeException(errorStringBuilder.toString());
+        }
+
+        return revCompFindCount > forwardFindCount;
+    }
+
+    private static Context determineDemultiplexingContext(
+            Input input, BCLParameters bclParameters, Map<String, Map<String, Fastq>> masterFastqByReadTypeByLaneStr,
+            boolean index2ReverseCompliment) throws IOException {
 
         // create the output dirs
         Path demultiplexedFastqsDirPath = input.workdirPath.resolve("demultiplexed-fastqs");
@@ -209,20 +404,27 @@ public class Demultiplex {
         Path indexCountsDirPath = input.workdirPath.resolve("index-counts");
         Files.createDirectory(indexCountsDirPath);
 
+        // determine the index 2 length
+        int index2Length = 0;
+        if (input.sampleSpecSetHasIndex2 && bclParameters.hasIndex2) { index2Length = bclParameters.index2Length; }
+
         // create the context of this demultiplexing process
-        Context context = new Context(
+        return new Context(
                 masterFastqByReadTypeByLaneStr,
                 input.sampleIndexSpecSet,
                 bclParameters.index1Length,
-                bclParameters.index2Length,
+                index2Length,
                 index2ReverseCompliment,
                 demultiplexedFastqsDirPath,
                 input.sequenceChunkSize
         );
+    }
+
+    private static void demultiplexMasterFastqs(Input input, Context context) throws IOException, InterruptedException {
 
         // resolve the number of demultiplexing threads we need
         int numDemultiplexingThreads = input.demultiplexingThreadNumber;
-        if (numDemultiplexingThreads == -1) { numDemultiplexingThreads = masterFastqByReadTypeByLaneStr.size(); }
+        if (numDemultiplexingThreads == -1) { numDemultiplexingThreads = context.masterFastqByReadTypeByLaneStr.size(); }
 
         // get a set of ids for demultiplexing threads
         Set<Integer> demultiplexingThreadIdSet = new HashSet<>();
@@ -230,7 +432,7 @@ public class Demultiplex {
 
         // create a sequence group flow
         SequenceGroupFlow sequenceGroupFlow = new SequenceGroupFlow(
-                new HashSet<>(masterFastqByReadTypeByLaneStr.keySet()),
+                new HashSet<>(context.masterFastqByReadTypeByLaneStr.keySet()),
                 input.sequenceChunkQueueSize,
                 demultiplexingThreadIdSet
         );
@@ -256,6 +458,5 @@ public class Demultiplex {
 
         // wait on the writer threads which should be the last to complete
         for (WriterThread writerThread : writerThreadList) { writerThread.join(); }
-
     }
 }

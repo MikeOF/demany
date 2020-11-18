@@ -93,9 +93,12 @@ public class Context {
             throw new RemoteException("mutiplexedSequenceGroupSize must be greater than -1");
         }
 
+        // set master fastq map, this is already unmodifiable
+        this.masterFastqByReadTypeByLaneStr = masterFastqByReadTypeByLaneStr;
+
         // get lane str by lane int map
         Map<Integer, String> laneStrByLaneInt = getLaneStrByLaneInt(
-                new HashSet<>(masterFastqByReadTypeByLaneStr.keySet())
+                new HashSet<>(this.masterFastqByReadTypeByLaneStr.keySet())
         );
 
         // set simple variables
@@ -109,7 +112,7 @@ public class Context {
                 laneStrByLaneInt.size() * mutiplexedSequenceGroupSize / sampleIndexSpecSet.size();
 
         // get an unmodifiable view of a read type set from the master fastq map
-        this.readTypeSet = masterFastqByReadTypeByLaneStr.values().stream()
+        this.readTypeSet = this.masterFastqByReadTypeByLaneStr.values().stream()
                 .flatMap(v -> v.keySet().stream())
                 .collect(Collectors.toUnmodifiableSet());
 
@@ -118,11 +121,6 @@ public class Context {
         this.index1ReadType = indexReadTypes[0];
         if (hasIndex2) { this.index2ReadType = indexReadTypes[1]; }
         else { this.index2ReadType = null; }
-
-        // vallidate and set an unmodifiable view of the master fastq map
-        this.masterFastqByReadTypeByLaneStr = getUnmodifiableMasterFastqByReadTypeByLaneStr(
-                masterFastqByReadTypeByLaneStr
-        );
 
         // set unmodifiable view of a non-index read type map on this context instance
         this.nonIndexReadTypeSet = this.readTypeSet.stream()
@@ -189,23 +187,6 @@ public class Context {
 
             return new String[]{Fastq.INDEX_1_READ_TYPE_STR};
         }
-    }
-
-    private Map<String, Map<String, Fastq>> getUnmodifiableMasterFastqByReadTypeByLaneStr(
-            Map<String, Map<String, Fastq>> masterFastqByReadTypeByLaneStr) {
-
-        // first check to make sure that each lane has the known read types
-        for (String laneStr : masterFastqByReadTypeByLaneStr.keySet()) {
-
-            Set<String> thisReadTypeSet = new HashSet<>(masterFastqByReadTypeByLaneStr.get(laneStr).keySet());
-
-            if (!this.readTypeSet.equals(thisReadTypeSet)) {
-                throw new RuntimeException("not all the lanes have the same read types");
-            }
-        }
-
-        // return an unmodifiable view
-        return Collections.unmodifiableMap(masterFastqByReadTypeByLaneStr);
     }
 
     private static Map<String, Set<SampleIdData>> getUnmodifiableSampleIdDataSetByLaneStr(

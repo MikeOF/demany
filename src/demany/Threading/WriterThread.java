@@ -68,8 +68,7 @@ public class WriterThread extends Thread {
                 Utils.tryToSleep();
 
                 // check to see if we are finished
-                if (this.sequenceGroupFlow.allReaderThreadsFinished() &&
-                        this.sequenceGroupFlow.allDemultiplexingThreadsFinished() &&
+                if (this.sequenceGroupFlow.allDemultiplexingThreadsFinished() &&
                         !this.sequenceGroupFlow.moreDemultiplexedSequenceGroupsAvailable()) {
 
                     break;

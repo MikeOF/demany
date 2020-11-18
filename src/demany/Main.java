@@ -18,16 +18,14 @@ public class Main {
         // first take input from standard in
         BufferedReader standardInReader = new BufferedReader(new InputStreamReader(System.in));
 
-        // get the input string
         StringBuilder inputStringBuilder = new StringBuilder();
         String line;
-        while ((line = standardInReader.readLine()) != null) {
-            inputStringBuilder.append(line);
-        }
+        while ((line = standardInReader.readLine()) != null) { inputStringBuilder.append(line); }
 
         // parse the input
         Input input = new Input(inputStringBuilder.toString());
 
+        // dispatch to different programs
         if (input.program == Input.Program.CHECK_INDICES) {
             System.exit(checkIndices(input));
 

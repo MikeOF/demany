@@ -24,8 +24,8 @@ public class Input {
 
     // default values
     public static final int demultiplexingThreadNumberDefault = -1;
-    public static final int sequenceChunkSizeDefault = 20000;
-    public static final int sequenceChunkQueueSizeDefault = 5;
+    public static final int sequenceChunkSizeDefault = 10000;
+    public static final int sequenceChunkQueueSizeDefault = 3;
 
     // Note: a demultiplexingThreadNumberDefault of -1 means that there will be 1 demultiplexing thread per lane
 
@@ -33,6 +33,7 @@ public class Input {
 
     public final Input.Program program;
     public final Set<SampleIndexSpec> sampleIndexSpecSet;
+    public final boolean sampleSpecSetHasIndex2;
     public final Path workdirPath;
     public final Path bclPath;
     public final int demultiplexingThreadNumber;
@@ -57,6 +58,9 @@ public class Input {
             tempSampleIndexSpecSet.add(new SampleIndexSpec((JSONObject) sampleIndexSpecObject));
         }
         this.sampleIndexSpecSet = Collections.unmodifiableSet(tempSampleIndexSpecSet);
+
+        // determiend if any of the sample index specs have an index 2
+        this.sampleSpecSetHasIndex2 = this.sampleIndexSpecSet.stream().anyMatch(SampleIndexSpec::hasIndex2);
 
         // if we are demultiplexing a bcl dir, get its path and the workdir path
         if (this.program == Input.Program.DEMULTIPLEX) {

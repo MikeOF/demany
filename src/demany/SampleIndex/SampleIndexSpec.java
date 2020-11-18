@@ -62,4 +62,6 @@ public class SampleIndexSpec {
 
         return result;
     }
+
+    public boolean hasIndex2() { return this.index2 != null; }
 }

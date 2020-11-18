@@ -33,7 +33,7 @@ public class Utils {
     }
 
     public static void tryToSleep() {
-        try { Thread.sleep(10); }
+        try { Thread.sleep(6); }
         catch (InterruptedException e) { throw new RuntimeException("could not sleep: " + e.getMessage()); }
     }
 }
