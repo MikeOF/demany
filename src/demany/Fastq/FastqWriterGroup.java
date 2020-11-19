@@ -1,6 +1,4 @@
-package demany.DataFlow;
-
-import demany.Utils.Fastq;
+package demany.Fastq;
 
 import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;

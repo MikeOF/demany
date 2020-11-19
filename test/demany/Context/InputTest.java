@@ -1,6 +1,8 @@
-package demany;
+package demany.Context;
 
+import demany.Program.Program;
 import demany.SampleIndex.SampleIndexSpec;
+import demany.TestUtil;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.junit.jupiter.api.AfterEach;
@@ -24,7 +26,7 @@ class InputTestHelper {
         object.put("workdirPath", "test/workdir");
         object.put("sampleIndexSpecArray", array);
 
-        if (program.equals(Input.Program.DEMULTIPLEX.toString())) {
+        if (program.equals(Program.DEMULTIPLEX.toString())) {
             object.put("bclPath", "test/bcl");
         }
 

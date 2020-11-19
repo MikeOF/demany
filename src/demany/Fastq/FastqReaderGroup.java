@@ -1,6 +1,5 @@
-package demany.DataFlow;
+package demany.Fastq;
 
-import demany.Utils.Fastq;
 import demany.Utils.Utils;
 
 import java.io.BufferedReader;
@@ -10,22 +9,18 @@ import java.util.Map;
 
 public class FastqReaderGroup {
 
-    public final HashMap<String, BufferedReader> readerByReadType = new HashMap<>();
-    public final int sequenceChunkSize;
-    public boolean doneReading = false;
+    private final HashMap<String, BufferedReader> readerByReadType = new HashMap<>();
+    private boolean doneReading = false;
 
-    public FastqReaderGroup(Map<String, Fastq> fastqByReadType, int sequenceChunkSize) throws IOException {
+    public FastqReaderGroup(Map<String, Fastq> fastqByReadType) throws IOException {
 
         // get a reader for each fastq passed in
         for (String readType : fastqByReadType.keySet()) {
 
             this.readerByReadType.put(
-                    readType,
-                    Utils.getBufferedGzippedFileReader(fastqByReadType.get(readType).path)
+                    readType, Utils.getBufferedGzippedFileReader(fastqByReadType.get(readType).path)
             );
         }
-
-        this.sequenceChunkSize = sequenceChunkSize;
     }
 
     public SequenceGroup readSequences() throws IOException {
@@ -34,14 +29,14 @@ public class FastqReaderGroup {
         if (this.doneReading) { throw new RuntimeException("cannot read sequences after we're done reading"); }
 
         // create the sequence group that we will be reading in
-        SequenceGroup sequenceGroup = new SequenceGroup(this.readerByReadType.keySet(), this.sequenceChunkSize);
+        SequenceGroup sequenceGroup = new SequenceGroup(this.readerByReadType.keySet());
 
         // read in sequences from each reader
         for (String readType : this.readerByReadType.keySet()) {
 
             BufferedReader reader = this.readerByReadType.get(readType);
 
-            for (int i = 0; i < this.sequenceChunkSize; i++) {
+            for (int i = 0; i < SequenceGroup.MAX_NUMBER_OF_SEQUENCES; i++) {
 
                 // read in a sequence, ie 4 lines, from a fastq
                 SequenceLines sequenceLines = new SequenceLines(
@@ -70,4 +65,6 @@ public class FastqReaderGroup {
 
         return sequenceGroup;
     }
+
+    public boolean isNotDoneReading() { return !this.doneReading; }
 }

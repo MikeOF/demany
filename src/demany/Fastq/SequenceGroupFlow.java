@@ -1,4 +1,4 @@
-package demany.DataFlow;
+package demany.Fastq;
 
 import java.util.*;
 import java.util.concurrent.locks.Lock;
@@ -6,6 +6,8 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 public class SequenceGroupFlow {
+
+    static final int SEQUENCE_GROUP_QUEUE_MAX_SIZE = 3;
 
     static class LockSequenceGroupQueuePair {
 
@@ -34,12 +36,7 @@ public class SequenceGroupFlow {
     private final Lock countByIndexStrByIdByLaneStrLock = new ReentrantLock();
     private final HashMap<String, HashMap<String, HashMap<String, Long>>> countByIndexStrByIdByLaneStr = new HashMap<>();
 
-    private final int maxSequenceGroupsAllowed;
-
-    public SequenceGroupFlow(Set<String> laneStrSet, int maxSequenceGroupsAllowed,
-                             Set<Integer> demultiplexingThreadIdSet) {
-
-        this.maxSequenceGroupsAllowed = maxSequenceGroupsAllowed;
+    public SequenceGroupFlow(Set<String> laneStrSet, Set<Integer> demultiplexingThreadIdSet) {
 
         // create a map to store when reader threads have completed
         for (String laneStr : laneStrSet) {
@@ -134,7 +131,7 @@ public class SequenceGroupFlow {
         LockSequenceGroupQueuePair pair = multiplexedSeqGroupsByLaneStr.get(laneStr);
 
         // lock is not necessary
-        return pair.sequenceGroupQueue.size() < maxSequenceGroupsAllowed;
+        return pair.sequenceGroupQueue.size() < SequenceGroupFlow.SEQUENCE_GROUP_QUEUE_MAX_SIZE;
     }
 
     public void addMultiplexedSequenceGroup(String laneStr, SequenceGroup sequenceGroup) {
@@ -213,7 +210,7 @@ public class SequenceGroupFlow {
         LockSequenceGroupByIdQueuePair pair = this.demultiplexedSeqGroupsByLaneStr.get(laneStr);
 
         // lock not needed
-        return pair.compressedSequenceGroupByIdQueue.size() < this.maxSequenceGroupsAllowed;
+        return pair.compressedSequenceGroupByIdQueue.size() < SequenceGroupFlow.SEQUENCE_GROUP_QUEUE_MAX_SIZE;
     }
 
     public void addDemultiplexedSequenceGroups(String laneStr, HashMap<String, CompressedSequenceGroup> compressedSequenceGroupById) {
@@ -300,6 +297,39 @@ public class SequenceGroupFlow {
         } finally {
             this.countByIndexStrByIdByLaneStrLock.unlock();
         }
+    }
 
+    public Map<String, Map<String, Map<String, Long>>> getCountByIndexStrByIdByLaneStr() {
+
+        // block until we get the lock on the map
+        this.countByIndexStrByIdByLaneStrLock.lock();
+
+        try {
+
+            // create an unmodifiable view of the map
+            Map<String, Map<String, Map<String, Long>>> resultCountByIndexStrByIdByLaneStr = new HashMap<>();
+
+            // each lane string
+            for (String laneStr : this.countByIndexStrByIdByLaneStr.keySet()) {
+
+                Map<String, Map<String, Long>> resultCountByIndexStrById = new HashMap<>();
+
+                // each sample id
+                for (String id : this.countByIndexStrByIdByLaneStr.get(laneStr).keySet()) {
+
+                    resultCountByIndexStrById.put(id,
+                            Collections.unmodifiableMap(this.countByIndexStrByIdByLaneStr.get(laneStr).get(id))
+                    );
+                }
+
+                resultCountByIndexStrByIdByLaneStr.put(laneStr, Collections.unmodifiableMap(resultCountByIndexStrById));
+            }
+
+            // return the map
+            return resultCountByIndexStrByIdByLaneStr;
+
+        } finally {
+            this.countByIndexStrByIdByLaneStrLock.unlock();
+        }
     }
 }

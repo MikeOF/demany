@@ -1,5 +1,6 @@
-package demany.Utils;
+package demany.Context;
 
+import demany.Context.BCLParameters;
 import org.junit.jupiter.api.Test;
 import org.xml.sax.SAXException;
 

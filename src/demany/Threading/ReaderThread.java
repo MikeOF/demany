@@ -1,13 +1,12 @@
 package demany.Threading;
 
-import demany.Context;
-import demany.DataFlow.FastqReaderGroup;
-import demany.DataFlow.SequenceGroup;
-import demany.DataFlow.SequenceGroupFlow;
+import demany.Context.DemultiplexingContext;
+import demany.Fastq.FastqReaderGroup;
+import demany.Fastq.SequenceGroup;
+import demany.Fastq.SequenceGroupFlow;
 import demany.Utils.Utils;
 
 import java.io.IOException;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class ReaderThread extends Thread {
@@ -18,29 +17,30 @@ public class ReaderThread extends Thread {
     private final SequenceGroupFlow sequenceGroupFlow;
     private final FastqReaderGroup fastqReaderGroup;
 
-    public ReaderThread(String laneStr, SequenceGroupFlow sequenceGroupFlow, Context context) throws IOException {
+    public ReaderThread(
+            String laneStr, SequenceGroupFlow sequenceGroupFlow, DemultiplexingContext demultiplexingContext
+    ) throws IOException {
 
         this.laneStr = laneStr;
         this.sequenceGroupFlow = sequenceGroupFlow;
-        this.fastqReaderGroup = new FastqReaderGroup(
-                context.masterFastqByReadTypeByLaneStr.get(laneStr),
-                context.mutiplexedSequenceGroupSize
-        );
+        this.fastqReaderGroup = new FastqReaderGroup(demultiplexingContext.masterFastqByReadTypeByLaneStr.get(laneStr));
     }
 
     @Override
     public void run() {
 
-        while (!fastqReaderGroup.doneReading) {
+        while (this.fastqReaderGroup.isNotDoneReading()) {
+
+            // reset the "did work" variable
             boolean didWork = false;
 
             // check to see if we need to read a chunk of sequences
-            if (sequenceGroupFlow.moreMultiplexedSequenceGroupsNeeded(laneStr)) {
+            if (this.sequenceGroupFlow.moreMultiplexedSequenceGroupsNeeded(laneStr)) {
 
                 try {
 
                     // read a group of sequences
-                    SequenceGroup sequenceGroup = fastqReaderGroup.readSequences();
+                    SequenceGroup sequenceGroup = this.fastqReaderGroup.readSequences();
 
                     // make sure that the sequence group is completed
                     if (!sequenceGroup.isCompleted()) {
@@ -51,16 +51,16 @@ public class ReaderThread extends Thread {
                     if (sequenceGroup.isEmpty()) {
 
                         // make sure the fastq reader group is done reading
-                        if (!fastqReaderGroup.doneReading) {
+                        if (this.fastqReaderGroup.isNotDoneReading()) {
                             throw new RuntimeException(
-                                    "a fastq reader group that isn't done reading returned an empty sequence group"
+                                    "a fastq reader group that isn't done reading generated an empty sequence group"
                             );
                         }
 
                     } else {
 
                         // add this non-empty sequence group to the flow
-                        sequenceGroupFlow.addMultiplexedSequenceGroup(laneStr, sequenceGroup);
+                        this.sequenceGroupFlow.addMultiplexedSequenceGroup(this.laneStr, sequenceGroup);
                     }
 
                 } catch (IOException e) {

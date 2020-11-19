@@ -1,4 +1,4 @@
-package demany.DataFlow;
+package demany.Fastq;
 
 import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;

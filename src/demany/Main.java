@@ -1,5 +1,9 @@
 package demany;
 
+import demany.Context.Input;
+import demany.Program.Demultiplex;
+import demany.Program.Program;
+
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.logging.Handler;
@@ -15,21 +19,20 @@ public class Main {
         // first set the global logger
         setupStandardOutLogging();
 
-        // first take input from standard in
+        // take input from standard in
         BufferedReader standardInReader = new BufferedReader(new InputStreamReader(System.in));
 
-        StringBuilder inputStringBuilder = new StringBuilder();
-        String line;
+        StringBuilder inputStringBuilder = new StringBuilder(); String line;
         while ((line = standardInReader.readLine()) != null) { inputStringBuilder.append(line); }
 
         // parse the input
         Input input = new Input(inputStringBuilder.toString());
 
-        // dispatch to different programs
-        if (input.program == Input.Program.CHECK_INDICES) {
+        // dispatch to the correct program
+        if (input.program == Program.CHECK_INDICES) {
             System.exit(checkIndices(input));
 
-        } else if(input.program == Input.Program.DEMULTIPLEX) {
+        } else if(input.program == Program.DEMULTIPLEX) {
             System.exit(Demultiplex.ExecuteDemultiplex(input));
 
         } else {
@@ -53,7 +56,6 @@ public class Main {
                 "java.util.logging.SimpleFormatter.format",
                 "%1$tb %1$td, %1$tY %1$tl:%1$tM:%1$tS %1$Tp %2$s %4$s: %5$s%n"
         );
-
     }
 
     private static int checkIndices(Input input) {

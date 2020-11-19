@@ -1,4 +1,4 @@
-package demany.Utils;
+package demany.Fastq;
 
 import java.util.*;
 

@@ -1,6 +1,6 @@
-package demany.Utils;
+package demany.Fastq;
 
-import demany.Utils.SequenceOperator;
+import demany.Fastq.SequenceOperator;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;

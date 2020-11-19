@@ -1,5 +1,6 @@
-package demany.Utils;
+package demany.Fastq;
 
+import demany.Fastq.Fastq;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;

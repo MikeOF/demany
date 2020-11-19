@@ -1,4 +1,4 @@
-package demany.DataFlow;
+package demany.Fastq;
 
 public class SequenceLines {
 

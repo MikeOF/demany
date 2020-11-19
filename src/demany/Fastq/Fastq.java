@@ -1,15 +1,12 @@
-package demany.Utils;
+package demany.Fastq;
+
+import demany.Utils.Utils;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -34,6 +31,47 @@ public class Fastq {
             "^I[1-9]+[0-9]*$",
             Pattern.CASE_INSENSITIVE
     );
+
+    public static Fastq getSampleFastqAtDir(Path dirPath, String sample, String laneStr, String readTypeStr) {
+
+        checkParentDirPath(dirPath);
+
+        return new Fastq(dirPath.resolve(getFilenameForSampleFastq(sample, laneStr, readTypeStr)));
+    }
+
+    public static Fastq getUndeterminedFastqAtDir(Path dirPath, String laneStr, String readTypeStr) {
+
+        checkParentDirPath(dirPath);
+
+        return new Fastq(dirPath.resolve(getFilenameForUndeterminedFastq(laneStr, readTypeStr)));
+    }
+
+    public static FilenameFilter getFastqFilenameFilter() {
+        return (dir, name) -> name.toLowerCase().endsWith("fastq.gz");
+    }
+
+    public static int getLaneIntFromLaneStr(String laneStr) {
+
+        Matcher matcher = Fastq.laneStrPattern.matcher(laneStr);
+
+        if (!matcher.matches()) {
+            throw new RuntimeException("could not match the lane str: " + laneStr);
+        }
+
+        return Integer.parseInt(matcher.group(3));
+    }
+
+    private static void checkParentDirPath(Path dirPath) {
+
+        // check path
+        if (!dirPath.isAbsolute()) {
+            throw new RuntimeException("dirPath must be absolute");
+        }
+
+        if (!Files.isDirectory(dirPath)) {
+            throw new RuntimeException("dirPath must be an existant directory");
+        }
+    }
 
     private static final Pattern laneStrPattern = Pattern.compile("(L)([0]*)([0-9]*)", Pattern.CASE_INSENSITIVE);
 
@@ -77,6 +115,21 @@ public class Fastq {
         this.isAnIndexFastq = indexReadTypePattern.matcher(this.readTypeStr).matches();
     }
 
+    @Override
+    public boolean equals(Object object) {
+        if (this == object) return true;
+        if (object == null || getClass() != object.getClass()) return false;
+
+        Fastq other = (Fastq) object;
+
+        return path.equals(other.path);
+    }
+
+    @Override
+    public int hashCode() {
+        return path.hashCode();
+    }
+
     private static String getFilenameForSampleFastq(String sample, String laneStr, String readTypeStr) {
         return sample + "_" + SAMPLE_1_STR + "_" + laneStr + "_" + readTypeStr + "_" + STANDARD_TAIL;
     }
@@ -102,61 +155,5 @@ public class Fastq {
         reader.close();
 
         return firstLine.strip().split("\\s+")[0];
-    }
-
-    @Override
-    public boolean equals(Object object) {
-        if (this == object) return true;
-        if (object == null || getClass() != object.getClass()) return false;
-
-        Fastq other = (Fastq) object;
-
-        return path.equals(other.path);
-    }
-
-    @Override
-    public int hashCode() {
-        return path.hashCode();
-    }
-
-    public static Fastq getSampleFastqAtDir(Path dirPath, String sample, String laneStr, String readTypeStr) {
-
-        checkParentDirPath(dirPath);
-
-        return new Fastq(dirPath.resolve(getFilenameForSampleFastq(sample, laneStr, readTypeStr)));
-    }
-
-    public static Fastq getUndeterminedFastqAtDir(Path dirPath, String laneStr, String readTypeStr) {
-
-        checkParentDirPath(dirPath);
-
-        return new Fastq(dirPath.resolve(getFilenameForUndeterminedFastq(laneStr, readTypeStr)));
-    }
-
-    public static FilenameFilter getFastqFilenameFilter() {
-        return (dir, name) -> name.toLowerCase().endsWith("fastq.gz");
-    }
-
-    public static int getLaneIntFromLaneStr(String laneStr) {
-
-        Matcher matcher = Fastq.laneStrPattern.matcher(laneStr);
-
-        if (!matcher.matches()) {
-            throw new RuntimeException("could not match the lane str: " + laneStr);
-        }
-
-        return Integer.parseInt(matcher.group(3));
-    }
-
-    private static void checkParentDirPath(Path dirPath) {
-
-        // check path
-        if (!dirPath.isAbsolute()) {
-            throw new RuntimeException("dirPath must be absolute");
-        }
-
-        if (!Files.isDirectory(dirPath)) {
-            throw new RuntimeException("dirPath must be an existant directory");
-        }
     }
 }

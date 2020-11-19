@@ -1,23 +1,22 @@
-package demany;
+package demany.Program;
 
-import demany.DataFlow.SequenceGroupFlow;
-import demany.DataFlow.SequenceLines;
+import demany.Context.DemultiplexingContext;
+import demany.Context.Input;
+import demany.Fastq.SequenceGroupFlow;
+import demany.Fastq.SequenceLines;
 import demany.SampleIndex.SampleIndexKeyMappingCollection;
 import demany.SampleIndex.SampleIndexLookup;
 import demany.SampleIndex.SampleIndexSpec;
 import demany.Threading.DemultiplexingThread;
 import demany.Threading.ReaderThread;
 import demany.Threading.WriterThread;
-import demany.Utils.BCLParameters;
-import demany.Utils.Fastq;
+import demany.Context.BCLParameters;
+import demany.Fastq.Fastq;
 import demany.Utils.Utils;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.ParserConfigurationException;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -30,7 +29,7 @@ public class Demultiplex {
 
     private static final Logger LOGGER = Logger.getLogger( Demultiplex.class.getName() );
 
-    static int ExecuteDemultiplex(Input input)
+    public static int ExecuteDemultiplex(Input input)
             throws IOException, SAXException, ParserConfigurationException, InterruptedException {
 
         // print time
@@ -66,18 +65,30 @@ public class Demultiplex {
                 bcl2fastqOutputDirPath
         );
 
+        // get lane str by lane int map
+        Map<Integer, String> laneStrByLaneInt = getLaneStrByLaneInt(masterFastqByReadTypeByLaneStr);
+
+        // get sample index spec set by lane str map
+        Map<String, Set<SampleIndexSpec>> sampleIndexSpecSetByLaneStr = getSampleIndexSpecSetByLaneStr(
+                input.sampleIndexSpecSet, laneStrByLaneInt
+        );
+
         // determine the index 2 is reverse compliment parameter
         boolean index2ReverseCompliment = determineIndex2ReverseCompliment(
-                input, bclParameters, masterFastqByReadTypeByLaneStr
+                input, bclParameters, masterFastqByReadTypeByLaneStr, sampleIndexSpecSetByLaneStr
         );
 
         // determined the demultiplexing context
-        Context context = determineDemultiplexingContext(
-                input, bclParameters, masterFastqByReadTypeByLaneStr, index2ReverseCompliment
+        DemultiplexingContext demultiplexingContext = determineDemultiplexingContext(
+                input, bclParameters, masterFastqByReadTypeByLaneStr, index2ReverseCompliment, sampleIndexSpecSetByLaneStr
         );
 
         // demultiplex the master fastqs
-        demultiplexMasterFastqs(input, context);
+        Map<String, Map<String, Map<String, Long>>> countByIndexStrByIdByLaneStr =
+                demultiplexMasterFastqs(input, demultiplexingContext);
+
+        // write out the count by index str by sample id by lane string results
+        writeIndexCounts(demultiplexingContext, countByIndexStrByIdByLaneStr);
 
         LOGGER.log(Level.INFO,"\n\n ---- End of Demultiplexing Process ----\n");
 
@@ -200,12 +211,24 @@ public class Demultiplex {
         for (String laneStr : resultMap.keySet()) {
 
             Set<String> firstReadIdSet = new HashSet<>();
-            for (Fastq fastq : resultMap.get(laneStr).values()) {
-                firstReadIdSet.add(fastq.getFirstReadID());
-            }
+            for (Fastq fastq : resultMap.get(laneStr).values()) {firstReadIdSet.add(fastq.getFirstReadID()); }
 
             if (firstReadIdSet.size() != 1) {
                 throw new RuntimeException("master fastq files for lane " + laneStr + " had different first read ids");
+            }
+        }
+
+        // make sure all lanes have the same set of read types
+        Set<String> readTypeSet = null;
+        for (String laneStr : resultMap.keySet()) {
+
+            if (readTypeSet == null) {
+                readTypeSet = new HashSet<>(resultMap.get(laneStr).keySet());
+
+            } else {
+                if (!readTypeSet.equals(new HashSet<>(resultMap.get(laneStr).keySet()))) {
+                    throw new RuntimeException("different lanes of the master fastqs had different read types");
+                }
             }
         }
 
@@ -216,8 +239,42 @@ public class Demultiplex {
         return resultMap;
     }
 
+    private static Map<Integer, String> getLaneStrByLaneInt(
+            Map<String, Map<String, Fastq>> masterFastqByReadTypeByLaneStr) {
+
+        return masterFastqByReadTypeByLaneStr.keySet().stream()
+                .collect(Collectors.toUnmodifiableMap(Fastq::getLaneIntFromLaneStr, Function.identity()));
+    }
+
+    private static Map<String, Set<SampleIndexSpec>> getSampleIndexSpecSetByLaneStr(
+            Set<SampleIndexSpec> sampleIndexSpecSet, Map<Integer, String> laneStrByLaneInt) {
+
+        // create the sample index spec map
+        Map<String, Set<SampleIndexSpec>> modifiableSampleIndexSpecSetByLaneStr = new HashMap<>();
+        for (SampleIndexSpec sampleIndexSpec :sampleIndexSpecSet) {
+
+            // get the lane string for this sample index's lane int
+            String laneStr = laneStrByLaneInt.get(sampleIndexSpec.lane);
+
+            // add set to map if necessary
+            if (!modifiableSampleIndexSpecSetByLaneStr.containsKey(laneStr)) {
+                modifiableSampleIndexSpecSetByLaneStr.put(laneStr, new HashSet<>());
+            }
+
+            // add sample index spec to map
+            modifiableSampleIndexSpecSetByLaneStr.get(laneStr).add(sampleIndexSpec);
+        }
+
+        // set unmodifiable views of the sample maps on this context intance
+        modifiableSampleIndexSpecSetByLaneStr.replaceAll((k,v)->Collections.unmodifiableSet(v));
+
+        return Collections.unmodifiableMap(modifiableSampleIndexSpecSetByLaneStr);
+    }
+
     private static boolean determineIndex2ReverseCompliment(
-            Input input, BCLParameters bclParameters, Map<String, Map<String, Fastq>> masterFastqByReadTypeByLaneStr) throws IOException {
+            Input input, BCLParameters bclParameters, Map<String, Map<String, Fastq>> masterFastqByReadTypeByLaneStr,
+            Map<String, Set<SampleIndexSpec>> sampleIndexSpecSetByLaneStr
+    ) throws IOException {
 
         // check input
         if (!input.sampleSpecSetHasIndex2 || bclParameters.hasIndex2) { return false; }
@@ -225,22 +282,6 @@ public class Demultiplex {
         // make sure that the index 2 read type is in each lane
         if (!masterFastqByReadTypeByLaneStr.values().stream().allMatch(v->v.containsKey(Fastq.INDEX_2_READ_TYPE_STR))) {
             throw new RuntimeException("master fastq map doesn't have an index 2 read type in each lane");
-        }
-
-        // get lane str by lane int
-        Map<Integer, String> laneStrByLaneInt = masterFastqByReadTypeByLaneStr.keySet().stream()
-                .collect(Collectors.toMap(Fastq::getLaneIntFromLaneStr, Function.identity()));
-
-        // get sample index specs by lane
-        Map<String, Set<SampleIndexSpec>> sampleIndexSpecSetByLaneStr = new HashMap<>();
-        for (SampleIndexSpec sampleIndexSpec : input.sampleIndexSpecSet) {
-
-            String laneStr = laneStrByLaneInt.get(sampleIndexSpec.lane);
-            if (!sampleIndexSpecSetByLaneStr.containsKey(laneStr)) {
-                sampleIndexSpecSetByLaneStr.put(laneStr, new HashSet<>());
-            }
-
-            sampleIndexSpecSetByLaneStr.get(laneStr).add(sampleIndexSpec);
         }
 
         // now sample reads from each lane
@@ -394,9 +435,13 @@ public class Demultiplex {
         return revCompFindCount > forwardFindCount;
     }
 
-    private static Context determineDemultiplexingContext(
-            Input input, BCLParameters bclParameters, Map<String, Map<String, Fastq>> masterFastqByReadTypeByLaneStr,
-            boolean index2ReverseCompliment) throws IOException {
+    private static DemultiplexingContext determineDemultiplexingContext(
+            Input input,
+            BCLParameters bclParameters,
+            Map<String, Map<String, Fastq>> masterFastqByReadTypeByLaneStr,
+            boolean index2ReverseCompliment,
+            Map<String, Set<SampleIndexSpec>> sampleIndexSpecSetByLaneStr
+    ) throws IOException {
 
         // create the output dirs
         Path demultiplexedFastqsDirPath = input.workdirPath.resolve("demultiplexed-fastqs");
@@ -409,22 +454,23 @@ public class Demultiplex {
         if (input.sampleSpecSetHasIndex2 && bclParameters.hasIndex2) { index2Length = bclParameters.index2Length; }
 
         // create the context of this demultiplexing process
-        return new Context(
+        return new DemultiplexingContext(
                 masterFastqByReadTypeByLaneStr,
-                input.sampleIndexSpecSet,
+                sampleIndexSpecSetByLaneStr,
                 bclParameters.index1Length,
                 index2Length,
                 index2ReverseCompliment,
                 demultiplexedFastqsDirPath,
-                input.sequenceChunkSize
+                indexCountsDirPath
         );
     }
 
-    private static void demultiplexMasterFastqs(Input input, Context context) throws IOException, InterruptedException {
+    private static Map<String, Map<String, Map<String, Long>>> demultiplexMasterFastqs(
+            Input input, DemultiplexingContext demultiplexingContext) throws IOException, InterruptedException {
 
         // resolve the number of demultiplexing threads we need
         int numDemultiplexingThreads = input.demultiplexingThreadNumber;
-        if (numDemultiplexingThreads == -1) { numDemultiplexingThreads = context.masterFastqByReadTypeByLaneStr.size(); }
+        if (numDemultiplexingThreads == -1) { numDemultiplexingThreads = demultiplexingContext.masterFastqByReadTypeByLaneStr.size(); }
 
         // get a set of ids for demultiplexing threads
         Set<Integer> demultiplexingThreadIdSet = new HashSet<>();
@@ -432,23 +478,22 @@ public class Demultiplex {
 
         // create a sequence group flow
         SequenceGroupFlow sequenceGroupFlow = new SequenceGroupFlow(
-                new HashSet<>(context.masterFastqByReadTypeByLaneStr.keySet()),
-                input.sequenceChunkQueueSize,
+                new HashSet<>(demultiplexingContext.masterFastqByReadTypeByLaneStr.keySet()),
                 demultiplexingThreadIdSet
         );
 
         // create the threads
         ArrayList<DemultiplexingThread> demultiplexingThreadList = new ArrayList<>();
         for (int i : demultiplexingThreadIdSet) {
-            demultiplexingThreadList.add(new DemultiplexingThread(i, sequenceGroupFlow, context));
+            demultiplexingThreadList.add(new DemultiplexingThread(i, sequenceGroupFlow, demultiplexingContext));
         }
 
         ArrayList<ReaderThread> readerThreadList = new ArrayList<>();
         ArrayList<WriterThread> writerThreadList = new ArrayList<>();
-        for (String laneStr : context.masterFastqByReadTypeByLaneStr.keySet()) {
+        for (String laneStr : demultiplexingContext.masterFastqByReadTypeByLaneStr.keySet()) {
 
-            readerThreadList.add(new ReaderThread(laneStr, sequenceGroupFlow, context));
-            writerThreadList.add(new WriterThread(laneStr, sequenceGroupFlow, context));
+            readerThreadList.add(new ReaderThread(laneStr, sequenceGroupFlow, demultiplexingContext));
+            writerThreadList.add(new WriterThread(laneStr, sequenceGroupFlow, demultiplexingContext));
         }
 
         // start threads
@@ -458,5 +503,51 @@ public class Demultiplex {
 
         // wait on the writer threads which should be the last to complete
         for (WriterThread writerThread : writerThreadList) { writerThread.join(); }
+
+        // return the count by index string by id by lane string map
+        return sequenceGroupFlow.getCountByIndexStrByIdByLaneStr();
+    }
+
+    private static void writeIndexCounts(
+            DemultiplexingContext demultiplexingContext,
+            Map<String, Map<String, Map<String, Long>>> countByIndexStrByIdByLaneStr
+    ) throws IOException {
+
+        for (String laneStr : countByIndexStrByIdByLaneStr.keySet()) {
+
+            // create the directory for the lane
+            Path laneStrDirPath = demultiplexingContext.indexCountsDirPath.resolve(laneStr);
+            Files.createDirectory(laneStrDirPath);
+
+            for (String id : countByIndexStrByIdByLaneStr.get(laneStr).keySet()) {
+
+                // get count by index string
+                Map<String, Long> countByIndexStr = countByIndexStrByIdByLaneStr.get(laneStr).get(id);
+
+                // get sorted index string list
+                List<String> sortedIndexStrList = countByIndexStr.keySet().stream()
+                        .filter(v->countByIndexStr.get(v) > 100)
+                        .sorted(Comparator.comparingLong(k -> -countByIndexStr.get(k)))
+                        .collect(Collectors.toList());
+
+                // get file path for this sample id
+                Path outputFilePath = laneStrDirPath.resolve(id + ".tsv");
+
+                // open, write, and close the file
+                try (
+                        BufferedWriter writer = new BufferedWriter(
+                                new OutputStreamWriter(new FileOutputStream(outputFilePath.toString()))
+                        )
+                ) {
+
+                    // write out each line
+                    for (String indexStr : sortedIndexStrList) {
+
+                        writer.write(indexStr + "\t" + countByIndexStr.get(indexStr));
+                        writer.newLine();
+                    }
+                }
+            }
+        }
     }
 }

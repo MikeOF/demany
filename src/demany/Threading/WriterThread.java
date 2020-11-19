@@ -1,17 +1,15 @@
 package demany.Threading;
 
-import demany.Context;
-import demany.DataFlow.CompressedSequenceGroup;
-import demany.DataFlow.FastqWriterGroup;
-import demany.DataFlow.SequenceGroup;
-import demany.DataFlow.SequenceGroupFlow;
-import demany.Utils.Fastq;
+import demany.Context.DemultiplexingContext;
+import demany.Fastq.CompressedSequenceGroup;
+import demany.Fastq.FastqWriterGroup;
+import demany.Fastq.SequenceGroupFlow;
+import demany.Fastq.Fastq;
 import demany.Utils.Utils;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class WriterThread extends Thread {
@@ -22,13 +20,13 @@ public class WriterThread extends Thread {
     private final SequenceGroupFlow sequenceGroupFlow;
     private final HashMap<String, FastqWriterGroup> fastqWriterGroupById = new HashMap<>();
 
-    public WriterThread(String laneStr, SequenceGroupFlow sequenceGroupFlow, Context context) throws IOException {
+    public WriterThread(String laneStr, SequenceGroupFlow sequenceGroupFlow, DemultiplexingContext demultiplexingContext) throws IOException {
 
         this.laneStr = laneStr;
         this.sequenceGroupFlow = sequenceGroupFlow;
 
         // add an undetermined fastq writer group for this lane
-        Map<String, Map<String, Fastq>> outputFastqByReadTypeById = context.outputFastqByReadTypeByIdByLaneStr.get(laneStr);
+        Map<String, Map<String, Fastq>> outputFastqByReadTypeById = demultiplexingContext.outputFastqByReadTypeByIdByLaneStr.get(laneStr);
         for (String id : outputFastqByReadTypeById.keySet()) {
             this.fastqWriterGroupById.put(
                     id,

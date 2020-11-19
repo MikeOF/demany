@@ -1,8 +1,7 @@
-package demany.Utils;
+package demany.Context;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
@@ -10,12 +9,14 @@ import org.xml.sax.SAXException;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class BCLParameters {
@@ -79,7 +80,8 @@ public class BCLParameters {
         this.index2Length = getIndex2Length(this.readInfoSet);
     }
 
-    static Set<ReadInfo> getReadInfoSet(String runInfoXML) throws IOException, SAXException, ParserConfigurationException {
+    static Set<ReadInfo> getReadInfoSet(String runInfoXML)
+            throws IOException, SAXException, ParserConfigurationException {
 
         // create xml document
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();

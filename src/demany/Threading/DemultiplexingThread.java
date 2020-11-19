@@ -1,21 +1,17 @@
 package demany.Threading;
 
-import demany.Context;
-import demany.DataFlow.CompressedSequenceGroup;
-import demany.DataFlow.SequenceGroup;
-import demany.DataFlow.SequenceGroupFlow;
-import demany.DataFlow.SequenceLines;
+import demany.Context.DemultiplexingContext;
+import demany.Fastq.CompressedSequenceGroup;
+import demany.Fastq.SequenceGroup;
+import demany.Fastq.SequenceGroupFlow;
+import demany.Fastq.SequenceLines;
 import demany.SampleIndex.SampleIndexLookup;
 import demany.Utils.Utils;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 public class DemultiplexingThread extends Thread {
 
@@ -24,22 +20,22 @@ public class DemultiplexingThread extends Thread {
     final HashMap<String, HashMap<String, HashMap<String, Long>>> countByIndexStrByIdByLaneStr = new HashMap<>();
     final int demultiplexingThreadId;
     final SequenceGroupFlow sequenceGroupFlow;
-    final Context context;
+    final DemultiplexingContext demultiplexingContext;
 
-    public DemultiplexingThread(int demultiplexingThreadId, SequenceGroupFlow sequenceGroupFlow, Context context) {
+    public DemultiplexingThread(int demultiplexingThreadId, SequenceGroupFlow sequenceGroupFlow, DemultiplexingContext demultiplexingContext) {
 
         this.demultiplexingThreadId = demultiplexingThreadId;
         this.sequenceGroupFlow = sequenceGroupFlow;
-        this.context = context;
+        this.demultiplexingContext = demultiplexingContext;
 
         // initialize the count by index str by id map
-        for (String laneStr : context.sampleIdDataSetByLaneStr.keySet()) {
+        for (String laneStr : demultiplexingContext.sampleIdDataSetByLaneStr.keySet()) {
 
             this.countByIndexStrByIdByLaneStr.put(laneStr, new HashMap<>());
 
-            this.countByIndexStrByIdByLaneStr.get(laneStr).put(Context.undeterminedId, new HashMap<>());
+            this.countByIndexStrByIdByLaneStr.get(laneStr).put(DemultiplexingContext.UNDETERMINED_ID, new HashMap<>());
 
-            for (Context.SampleIdData sampleIdData : context.sampleIdDataSetByLaneStr.get(laneStr)) {
+            for (DemultiplexingContext.SampleIdData sampleIdData : demultiplexingContext.sampleIdDataSetByLaneStr.get(laneStr)) {
 
                 this.countByIndexStrByIdByLaneStr.get(laneStr).put(sampleIdData.id, new HashMap<>());
             }
@@ -115,12 +111,12 @@ public class DemultiplexingThread extends Thread {
         HashMap<String, CompressedSequenceGroup> compressedSequenceGroupById = new HashMap<>();
 
         compressedSequenceGroupById.put(
-                Context.undeterminedId, new CompressedSequenceGroup(this.context.readTypeSet)
+                DemultiplexingContext.UNDETERMINED_ID, new CompressedSequenceGroup(this.demultiplexingContext.readTypeSet)
         );
 
-        for (Context.SampleIdData sampleIdData : this.context.sampleIdDataSetByLaneStr.get(laneStr)) {
+        for (DemultiplexingContext.SampleIdData sampleIdData : this.demultiplexingContext.sampleIdDataSetByLaneStr.get(laneStr)) {
             compressedSequenceGroupById.put(
-                    sampleIdData.id, new CompressedSequenceGroup(this.context.readTypeSet)
+                    sampleIdData.id, new CompressedSequenceGroup(this.demultiplexingContext.readTypeSet)
             );
         }
 
@@ -128,7 +124,7 @@ public class DemultiplexingThread extends Thread {
         HashMap<String, HashMap<String, Long>> countByIndexStrById = this.countByIndexStrByIdByLaneStr.get(laneStr);
 
         // get the lookup for this lane
-        SampleIndexLookup lookup = context.sampleIndexLookupByLaneStr.get(laneStr);
+        SampleIndexLookup lookup = demultiplexingContext.sampleIndexLookupByLaneStr.get(laneStr);
 
         // demultiplex the input sequence group
         SequenceLines index2SeqLines;
@@ -136,20 +132,20 @@ public class DemultiplexingThread extends Thread {
         for (int i = 0; i < sequenceGroup.size(); i++) {
 
             // get this index lines and index strings
-            SequenceLines index1SeqLines = sequenceGroup.sequenceListByReadType.get(this.context.index1ReadType).get(i);
-            String index1 = index1SeqLines.line2.substring(0, this.context.index1Length);
+            SequenceLines index1SeqLines = sequenceGroup.sequenceListByReadType.get(this.demultiplexingContext.index1ReadType).get(i);
+            String index1 = index1SeqLines.line2.substring(0, this.demultiplexingContext.index1Length);
 
-            if (this.context.hasIndex2) {
+            if (this.demultiplexingContext.hasIndex2) {
 
-                index2SeqLines = sequenceGroup.sequenceListByReadType.get(this.context.index2ReadType).get(i);
-                index2 = index2SeqLines.line2.substring(0, this.context.index2Length);
+                index2SeqLines = sequenceGroup.sequenceListByReadType.get(this.demultiplexingContext.index2ReadType).get(i);
+                index2 = index2SeqLines.line2.substring(0, this.demultiplexingContext.index2Length);
             }
 
             // lookup the sample id
             String sampleId = lookup.lookupProjectSampleId(index1, index2);
 
             // set the undetermined id if we didn't find a sample id
-            if (sampleId == null) { sampleId = Context.undeterminedId; }
+            if (sampleId == null) { sampleId = DemultiplexingContext.UNDETERMINED_ID; }
 
             // add lines to sequence group
             for (String readTypeString : sequenceGroup.sequenceListByReadType.keySet()) {
@@ -164,7 +160,7 @@ public class DemultiplexingThread extends Thread {
 
             // get the index string
             String indexStr;
-            if (this.context.hasIndex2) { indexStr = index1 + "-" + index2; } else { indexStr = index1; }
+            if (this.demultiplexingContext.hasIndex2) { indexStr = index1 + "-" + index2; } else { indexStr = index1; }
 
             // record the index count
             if (!countByIndexStr.containsKey(indexStr)) {
