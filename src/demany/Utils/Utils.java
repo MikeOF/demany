@@ -14,7 +14,7 @@ public class Utils {
     }
 
     public static void tryToSleep() {
-        try { Thread.sleep(6); }
+        try { Thread.sleep(2); }
         catch (InterruptedException e) { throw new RuntimeException("could not sleep: " + e.getMessage()); }
     }
 }

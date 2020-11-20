@@ -6,7 +6,7 @@ import java.util.Set;
 
 public class SequenceGroup {
 
-    public static final int MAX_NUMBER_OF_SEQUENCES = 10000;
+    public static final int MAX_NUMBER_OF_SEQUENCES = 30000;
 
     public final HashMap<String, ArrayList<SequenceLines>> sequenceListByReadType = new HashMap<>();
     private int size = 0;

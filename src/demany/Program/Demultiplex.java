@@ -610,6 +610,7 @@ public class Demultiplex {
                             + "\t"
                             + totalCountById.get(DemultiplexingContext.UNDETERMINED_ID)
             );
+            writer.newLine();
 
             // write the non-undetermined totals
             for (String id : nonUndeterminedIdSet) {

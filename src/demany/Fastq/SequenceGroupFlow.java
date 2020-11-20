@@ -7,7 +7,7 @@ import java.util.stream.Collectors;
 
 public class SequenceGroupFlow {
 
-    private static final int SEQUENCE_GROUP_QUEUE_MAX_SIZE = 4;
+    private static final int SEQUENCE_GROUP_QUEUE_MAX_SIZE = 3;
 
     private static class LockSequenceGroupQueuePair {
 
