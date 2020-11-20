@@ -57,15 +57,15 @@ public class SampleIndexKeyMappingOverlapCheck {
     }
 
     public boolean hasIndex2KeyOverlapSets() {
-        return index2KeyOverlapSet != null;
+        return this.index2KeyOverlapSet != null;
     }
 
     private boolean hasIndex1IdentityKeyCollision() {
-        return !index1IdentityKeyOverlapSet.isEmpty();
+        return !this.index1IdentityKeyOverlapSet.isEmpty();
     }
 
     private boolean hasIndex2IdentityKeyCollision() {
-        return hasIndex2KeyOverlapSets() && !index2IdentityKeyOverlapSet.isEmpty();
+        return hasIndex2KeyOverlapSets() && !this.index2IdentityKeyOverlapSet.isEmpty();
     }
 
     public boolean hasIdentityKeyCollision() {
@@ -73,11 +73,11 @@ public class SampleIndexKeyMappingOverlapCheck {
     }
 
     private boolean hasIndex1KeyOverlap() {
-        return !index1KeyOverlapSet.isEmpty();
+        return !this.index1KeyOverlapSet.isEmpty();
     }
 
     private boolean hasIndex2KeyOverlap() {
-        return hasIndex2KeyOverlapSets() && !index2KeyOverlapSet.isEmpty();
+        return hasIndex2KeyOverlapSets() && !this.index2KeyOverlapSet.isEmpty();
     }
 
     public boolean hasKeyOverlap() {
@@ -92,13 +92,13 @@ public class SampleIndexKeyMappingOverlapCheck {
         // first and second index strings
         String firstAndSecondIndex1 = String.format(
                 "first: %s, second: %s",
-                firstSampleIndexKeyMapping.sampleIndexSpec.index1,
-                secondSampleIndexKeyMapping.sampleIndexSpec.index1
+                this.firstSampleIndexKeyMapping.sampleIndexSpec.index1,
+                this.secondSampleIndexKeyMapping.sampleIndexSpec.index1
         );
         String firstAndSecondIndex2 = String.format(
                 "first: %s, second: %s",
-                firstSampleIndexKeyMapping.sampleIndexSpec.index2,
-                secondSampleIndexKeyMapping.sampleIndexSpec.index2
+                this.firstSampleIndexKeyMapping.sampleIndexSpec.index2,
+                this.secondSampleIndexKeyMapping.sampleIndexSpec.index2
         );
 
         // lines for identity key collision
@@ -111,10 +111,10 @@ public class SampleIndexKeyMappingOverlapCheck {
 
                 lineBuilder.append(
                         String.format("%s - %s and %s - %s have a collision on index 1, ",
-                                firstSampleIndexKeyMapping.sampleIndexSpec.project,
-                                firstSampleIndexKeyMapping.sampleIndexSpec.sample,
-                                secondSampleIndexKeyMapping.sampleIndexSpec.project,
-                                secondSampleIndexKeyMapping.sampleIndexSpec.sample
+                                this.firstSampleIndexKeyMapping.sampleIndexSpec.project,
+                                this.firstSampleIndexKeyMapping.sampleIndexSpec.sample,
+                                this.secondSampleIndexKeyMapping.sampleIndexSpec.project,
+                                this.secondSampleIndexKeyMapping.sampleIndexSpec.sample
                         )
                 );
 
@@ -130,10 +130,10 @@ public class SampleIndexKeyMappingOverlapCheck {
 
                 lineBuilder.append(
                         String.format("%s - %s and %s - %s have a collision on index 2, ",
-                                firstSampleIndexKeyMapping.sampleIndexSpec.project,
-                                firstSampleIndexKeyMapping.sampleIndexSpec.sample,
-                                secondSampleIndexKeyMapping.sampleIndexSpec.project,
-                                secondSampleIndexKeyMapping.sampleIndexSpec.sample
+                                this.firstSampleIndexKeyMapping.sampleIndexSpec.project,
+                                this.firstSampleIndexKeyMapping.sampleIndexSpec.sample,
+                                this.secondSampleIndexKeyMapping.sampleIndexSpec.project,
+                                this.secondSampleIndexKeyMapping.sampleIndexSpec.sample
                         )
                 );
 
@@ -153,11 +153,11 @@ public class SampleIndexKeyMappingOverlapCheck {
 
                 lineBuilder.append(
                         String.format("%s - %s and %s - %s have %d shared keys for index 1, ",
-                                firstSampleIndexKeyMapping.sampleIndexSpec.project,
-                                firstSampleIndexKeyMapping.sampleIndexSpec.sample,
-                                secondSampleIndexKeyMapping.sampleIndexSpec.project,
-                                secondSampleIndexKeyMapping.sampleIndexSpec.sample,
-                                index1KeyOverlapSet.size()
+                                this.firstSampleIndexKeyMapping.sampleIndexSpec.project,
+                                this.firstSampleIndexKeyMapping.sampleIndexSpec.sample,
+                                this.secondSampleIndexKeyMapping.sampleIndexSpec.project,
+                                this.secondSampleIndexKeyMapping.sampleIndexSpec.sample,
+                                this.index1KeyOverlapSet.size()
                         )
                 );
 
@@ -173,11 +173,11 @@ public class SampleIndexKeyMappingOverlapCheck {
 
                 lineBuilder.append(
                         String.format("%s - %s and %s - %s have %d shared keys for index 2, ",
-                                firstSampleIndexKeyMapping.sampleIndexSpec.project,
-                                firstSampleIndexKeyMapping.sampleIndexSpec.sample,
-                                secondSampleIndexKeyMapping.sampleIndexSpec.project,
-                                secondSampleIndexKeyMapping.sampleIndexSpec.sample,
-                                index2KeyOverlapSet.size()
+                                this.firstSampleIndexKeyMapping.sampleIndexSpec.project,
+                                this.firstSampleIndexKeyMapping.sampleIndexSpec.sample,
+                                this.secondSampleIndexKeyMapping.sampleIndexSpec.project,
+                                this.secondSampleIndexKeyMapping.sampleIndexSpec.sample,
+                                this.index2KeyOverlapSet.size()
                         )
                 );
 
