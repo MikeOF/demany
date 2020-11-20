@@ -14,11 +14,12 @@ public class SampleIndexLookup {
         HashSet<String> index2KeySet;
 
         ProjectSampleIdIndex2KeySetPair(SampleIndexSpec sampleIndexSpec, HashSet<String> index2KeySet) {
-            this.id = sampleIndexSpec.id; this.index2KeySet = index2KeySet;
+            this.id = sampleIndexSpec.id;
+            this.index2KeySet = index2KeySet;
         }
     }
 
-    private final HashMap<String, ProjectSampleIdIndex2KeySetPair> lookupMap;
+    private final HashMap<String, ProjectSampleIdIndex2KeySetPair> lookupMap = new HashMap<>();
 
     public SampleIndexLookup(SampleIndexKeyMappingCollection sampleIndexKeyMappingCollection,
                              boolean index2ReverseCompliment) {
@@ -31,14 +32,12 @@ public class SampleIndexLookup {
             );
         }
 
-        // create the lookup map
-        lookupMap = new HashMap<>();
-
+        // fill the lookup map
         ArrayList<SampleIndexKeyMapping> sampleIndexKeyMappingArrayList =
                 sampleIndexKeyMappingCollection.getSampleIndexKeyMappingList();
         for (int i = 0; i < sampleIndexKeyMappingArrayList.size(); i++) {
 
-            // get this mappings key maps
+            // get this mapping's key maps
             SampleIndexKeyMapping keyMapping = sampleIndexKeyMappingArrayList.get(i);
             HashSet<String> index1KeySet = keyMapping.getIndex1KeySetCopy();
 
@@ -83,14 +82,14 @@ public class SampleIndexLookup {
             );
 
             for (String key : index1KeySet) {
-                lookupMap.put(key, pair);
+                this.lookupMap.put(key, pair);
             }
         }
     }
 
     public String lookupProjectSampleId(String index1, String index2) {
 
-        ProjectSampleIdIndex2KeySetPair pair = lookupMap.get(index1);
+        ProjectSampleIdIndex2KeySetPair pair = this.lookupMap.get(index1);
 
         // if we have not found a pair, then return null
         if (pair == null) { return null; }
@@ -104,7 +103,7 @@ public class SampleIndexLookup {
             return null;
         }
 
-        // without index 2 return the sample index spec
+        // without index 2 return the sample index spec id
         return pair.id;
     }
 }
