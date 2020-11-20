@@ -1,7 +1,9 @@
 package demany.Program;
 
+import demany.Context.BCLParameters;
 import demany.Context.DemultiplexingContext;
 import demany.Context.Input;
+import demany.Fastq.Fastq;
 import demany.Fastq.SequenceGroupFlow;
 import demany.Fastq.SequenceLines;
 import demany.SampleIndex.SampleIndexKeyMappingCollection;
@@ -10,8 +12,6 @@ import demany.SampleIndex.SampleIndexSpec;
 import demany.Threading.DemultiplexingThread;
 import demany.Threading.ReaderThread;
 import demany.Threading.WriterThread;
-import demany.Context.BCLParameters;
-import demany.Fastq.Fastq;
 import demany.Utils.Utils;
 import org.xml.sax.SAXException;
 
@@ -38,6 +38,9 @@ public class Demultiplex {
         // check input
         if (input.sampleIndexSpecSet.isEmpty()) {
             throw new RuntimeException("sample index spec set is empty");
+        }
+        if (input.processingThreadNumber < 1) {
+            throw new RuntimeException("the processing thread number must be greater than 1");
         }
         if (Files.exists(input.workdirPath)) {
             throw new RuntimeException(
@@ -73,14 +76,18 @@ public class Demultiplex {
                 input.sampleIndexSpecSet, laneStrByLaneInt
         );
 
-        // determine the index 2 is reverse compliment parameter
+        // determine the index 2 reverse compliment parameter
         boolean index2ReverseCompliment = determineIndex2ReverseCompliment(
                 input, bclParameters, masterFastqByReadTypeByLaneStr, sampleIndexSpecSetByLaneStr
         );
 
-        // determined the demultiplexing context
+        // determine the demultiplexing context
         DemultiplexingContext demultiplexingContext = determineDemultiplexingContext(
-                input, bclParameters, masterFastqByReadTypeByLaneStr, index2ReverseCompliment, sampleIndexSpecSetByLaneStr
+                input,
+                bclParameters,
+                masterFastqByReadTypeByLaneStr,
+                sampleIndexSpecSetByLaneStr,
+                index2ReverseCompliment
         );
 
         // demultiplex the master fastqs
@@ -89,6 +96,9 @@ public class Demultiplex {
 
         // write out the count by index str by sample id by lane string results
         writeIndexCounts(demultiplexingContext, countByIndexStrByIdByLaneStr);
+
+        // write out the total counts file
+        writeTotalCounts(demultiplexingContext, countByIndexStrByIdByLaneStr);
 
         LOGGER.log(Level.INFO,"\n\n ---- End of Demultiplexing Process ----\n");
 
@@ -137,12 +147,12 @@ public class Demultiplex {
 
         // get the min trimmed read length
         int minTrimmedReadLength = bclParameters.index1Length;
-        if (bclParameters.hasIndex2) {
+        if (bclParameters.hasIndex2 && input.sampleSpecSetHasIndex2) {
             minTrimmedReadLength = Math.min(bclParameters.index1Length, bclParameters.index2Length);
         }
 
         // determine the number of threads to use
-        int pthreads = input.demultiplexingThreadNumber;
+        int pthreads = input.processingThreadNumber;
         int iothreads = pthreads / 3;
         if (iothreads == 0) { iothreads = 1; }
 
@@ -186,8 +196,8 @@ public class Demultiplex {
         File[] fastqFiles = dirFile.listFiles(Fastq.getFastqFilenameFilter());
 
         if (fastqFiles == null) {
-            throw new RuntimeException("bcl2fastq output dir path does not appear to be an existant dir, " +
-                    bcl2fastqOutputDirPath.toString());
+            throw new RuntimeException("bcl2fastq output dir path does not appear to be an existant dir, "
+                    + bcl2fastqOutputDirPath.toString());
         }
 
         // create the master fastq by read type by lane str map
@@ -211,7 +221,9 @@ public class Demultiplex {
         for (String laneStr : resultMap.keySet()) {
 
             Set<String> firstReadIdSet = new HashSet<>();
-            for (Fastq fastq : resultMap.get(laneStr).values()) {firstReadIdSet.add(fastq.getFirstReadID()); }
+            for (Fastq fastq : resultMap.get(laneStr).values()) {
+                firstReadIdSet.add(fastq.getFirstReadID());
+            }
 
             if (firstReadIdSet.size() != 1) {
                 throw new RuntimeException("master fastq files for lane " + laneStr + " had different first read ids");
@@ -250,25 +262,25 @@ public class Demultiplex {
             Set<SampleIndexSpec> sampleIndexSpecSet, Map<Integer, String> laneStrByLaneInt) {
 
         // create the sample index spec map
-        Map<String, Set<SampleIndexSpec>> modifiableSampleIndexSpecSetByLaneStr = new HashMap<>();
-        for (SampleIndexSpec sampleIndexSpec :sampleIndexSpecSet) {
+        Map<String, Set<SampleIndexSpec>> sampleIndexSpecSetByLaneStr = new HashMap<>();
+        for (SampleIndexSpec sampleIndexSpec : sampleIndexSpecSet) {
 
             // get the lane string for this sample index's lane int
             String laneStr = laneStrByLaneInt.get(sampleIndexSpec.lane);
 
             // add set to map if necessary
-            if (!modifiableSampleIndexSpecSetByLaneStr.containsKey(laneStr)) {
-                modifiableSampleIndexSpecSetByLaneStr.put(laneStr, new HashSet<>());
+            if (!sampleIndexSpecSetByLaneStr.containsKey(laneStr)) {
+                sampleIndexSpecSetByLaneStr.put(laneStr, new HashSet<>());
             }
 
             // add sample index spec to map
-            modifiableSampleIndexSpecSetByLaneStr.get(laneStr).add(sampleIndexSpec);
+            sampleIndexSpecSetByLaneStr.get(laneStr).add(sampleIndexSpec);
         }
 
         // set unmodifiable views of the sample maps on this context intance
-        modifiableSampleIndexSpecSetByLaneStr.replaceAll((k,v)->Collections.unmodifiableSet(v));
+        sampleIndexSpecSetByLaneStr.replaceAll((k,v)->Collections.unmodifiableSet(v));
 
-        return Collections.unmodifiableMap(modifiableSampleIndexSpecSetByLaneStr);
+        return Collections.unmodifiableMap(sampleIndexSpecSetByLaneStr);
     }
 
     private static boolean determineIndex2ReverseCompliment(
@@ -277,7 +289,7 @@ public class Demultiplex {
     ) throws IOException {
 
         // check input
-        if (!input.sampleSpecSetHasIndex2 || bclParameters.hasIndex2) { return false; }
+        if (!input.sampleSpecSetHasIndex2 || !bclParameters.hasIndex2) { return false; }
 
         // make sure that the index 2 read type is in each lane
         if (!masterFastqByReadTypeByLaneStr.values().stream().allMatch(v->v.containsKey(Fastq.INDEX_2_READ_TYPE_STR))) {
@@ -313,6 +325,7 @@ public class Demultiplex {
             BufferedReader index1Reader = Utils.getBufferedGzippedFileReader(index1Fastq.path);
             BufferedReader index2Reader = Utils.getBufferedGzippedFileReader(index2Fastq.path);
 
+            // read the first 1,000,000 sequences
             for (int i = 0; i < 1000000; i++) {
 
                 // read lines
@@ -379,7 +392,7 @@ public class Demultiplex {
                         revCompFindCountByIndexStr.put(indexStr, 1);
 
                     } else {
-                        revCompFindCountByIndexStr.put(indexStr, forwardFindCountByIndexStr.get(indexStr) + 1);
+                        revCompFindCountByIndexStr.put(indexStr, revCompFindCountByIndexStr.get(indexStr) + 1);
                     }
                 }
             }
@@ -394,8 +407,8 @@ public class Demultiplex {
         int majorFindCount = Math.max(forwardFindCount, revCompFindCount);
         double majorToTotalRatio = majorFindCount / (double) totalfindCount;
 
+        // throw error if the major to total ratio is insufficient
         if (majorToTotalRatio < .8) {
-
 
             // create error message
             StringBuilder errorStringBuilder = new StringBuilder();
@@ -439,8 +452,8 @@ public class Demultiplex {
             Input input,
             BCLParameters bclParameters,
             Map<String, Map<String, Fastq>> masterFastqByReadTypeByLaneStr,
-            boolean index2ReverseCompliment,
-            Map<String, Set<SampleIndexSpec>> sampleIndexSpecSetByLaneStr
+            Map<String, Set<SampleIndexSpec>> sampleIndexSpecSetByLaneStr,
+            boolean index2ReverseCompliment
     ) throws IOException {
 
         // create the output dirs
@@ -468,13 +481,12 @@ public class Demultiplex {
     private static Map<String, Map<String, Map<String, Long>>> demultiplexMasterFastqs(
             Input input, DemultiplexingContext demultiplexingContext) throws IOException, InterruptedException {
 
-        // resolve the number of demultiplexing threads we need
-        int numDemultiplexingThreads = input.demultiplexingThreadNumber;
-        if (numDemultiplexingThreads == -1) { numDemultiplexingThreads = demultiplexingContext.masterFastqByReadTypeByLaneStr.size(); }
-
         // get a set of ids for demultiplexing threads
         Set<Integer> demultiplexingThreadIdSet = new HashSet<>();
-        for (int i = 1; i <= numDemultiplexingThreads; i++) { demultiplexingThreadIdSet.add(i); }
+        for (int i = 1; i <= input.processingThreadNumber; i++) {
+
+            demultiplexingThreadIdSet.add(i);
+        }
 
         // create a sequence group flow
         SequenceGroupFlow sequenceGroupFlow = new SequenceGroupFlow(
@@ -482,12 +494,16 @@ public class Demultiplex {
                 demultiplexingThreadIdSet
         );
 
-        // create the threads
+        // create the demultiplexing threads
         ArrayList<DemultiplexingThread> demultiplexingThreadList = new ArrayList<>();
         for (int i : demultiplexingThreadIdSet) {
-            demultiplexingThreadList.add(new DemultiplexingThread(i, sequenceGroupFlow, demultiplexingContext));
+
+            demultiplexingThreadList.add(
+                    new DemultiplexingThread(i, sequenceGroupFlow, demultiplexingContext)
+            );
         }
 
+        // create the reader and writer threads
         ArrayList<ReaderThread> readerThreadList = new ArrayList<>();
         ArrayList<WriterThread> writerThreadList = new ArrayList<>();
         for (String laneStr : demultiplexingContext.masterFastqByReadTypeByLaneStr.keySet()) {
@@ -547,6 +563,59 @@ public class Demultiplex {
                         writer.newLine();
                     }
                 }
+            }
+        }
+    }
+
+    private static void writeTotalCounts(
+            DemultiplexingContext demultiplexingContext,
+            Map<String, Map<String, Map<String, Long>>> countByIndexStrByIdByLaneStr
+    ) throws IOException {
+
+        // get total counts by id
+        Map<String, Long> totalCountById = new HashMap<>();
+        for (String laneStr : countByIndexStrByIdByLaneStr.keySet()) {
+
+            // for each id in this lane
+            for (String id : countByIndexStrByIdByLaneStr.get(laneStr).keySet()) {
+
+                // add an entry for this id if necessary
+                if (!totalCountById.containsKey(id)) { totalCountById.put(id, 0L); }
+
+                // add all the index counts for this lane and id
+                for (Long count : countByIndexStrByIdByLaneStr.get(laneStr).get(id).values()) {
+
+                    totalCountById.put(id, totalCountById.get(id) + count);
+                }
+            }
+        }
+
+        // get all the non-undetermined ids
+        Set<String> nonUndeterminedIdSet = totalCountById.keySet().stream()
+                .filter(v->!v.equals(DemultiplexingContext.UNDETERMINED_ID))
+                .collect(Collectors.toSet());
+
+        // open, write, and close the file
+        Path outputFilePath = demultiplexingContext.indexCountsDirPath.resolve("total-counts.tsv");
+        try (
+                BufferedWriter writer = new BufferedWriter(
+                        new OutputStreamWriter(
+                                new FileOutputStream(outputFilePath.toString())
+                        )
+                )
+        ) {
+            // write the undetermined total
+            writer.write(
+                    DemultiplexingContext.UNDETERMINED_ID
+                            + "\t"
+                            + totalCountById.get(DemultiplexingContext.UNDETERMINED_ID)
+            );
+
+            // write the non-undetermined totals
+            for (String id : nonUndeterminedIdSet) {
+
+                writer.write(id + "\t" + totalCountById.get(id));
+                writer.newLine();
             }
         }
     }

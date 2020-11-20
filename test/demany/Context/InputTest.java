@@ -1,6 +1,5 @@
 package demany.Context;
 
-import demany.Program.Program;
 import demany.SampleIndex.SampleIndexSpec;
 import demany.TestUtil;
 import org.json.simple.JSONArray;
@@ -17,18 +16,15 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 class InputTestHelper {
 
-    static JSONObject createInputJSON(String program) {
+    static JSONObject createInputJSON() {
 
         JSONObject object = new JSONObject();
         JSONArray array = new JSONArray();
 
-        object.put("program", program);
+        object.put("processingThreadNumber", "4");
         object.put("workdirPath", "test/workdir");
         object.put("sampleIndexSpecArray", array);
-
-        if (program.equals(Program.DEMULTIPLEX.toString())) {
-            object.put("bclPath", "test/bcl");
-        }
+        object.put("bclPath", "test/bcl");
 
         return object;
     }
@@ -44,38 +40,10 @@ class InputTestHelper {
 
 class InputTest {
 
-    @BeforeEach
-    void setUp() {
-    }
-
-    @AfterEach
-    void tearDown() {
-    }
-
-    @Test
-    void testInputObjectConstructorCheckIndices() throws Exception {
-
-        JSONObject inputObject = InputTestHelper.createInputJSON("CHECK_INDICES");
-        JSONObject sampleIndexJSON = TestUtil.createSampleIndexJSON(
-                "TestProject", "TestSample", "AGGGC", "TCGAA",  2
-        );
-        InputTestHelper.addSampleIndexJSON(inputObject, sampleIndexJSON);
-        SampleIndexSpec sampleIndexSpec = TestUtil.getSampleIndexSpec(sampleIndexJSON);
-
-        Input input = new Input(inputObject.toJSONString());
-
-        assertEquals("CHECK_INDICES", input.program.name());
-        assertEquals(sampleIndexSpec, input.sampleIndexSpecSet.iterator().next());
-        assertNull(input.workdirPath);
-        assertNull(input.bclPath);
-    }
-
     @Test
     void testInputObjectConstructorDemultiplex() throws Exception {
 
-        JSONObject inputObject = InputTestHelper.createInputJSON("DEMULTIPLEX");
-        inputObject.put("workdirPath", "test/workdirPath");
-        inputObject.put("bclPath", "test/bclPath");
+        JSONObject inputObject = InputTestHelper.createInputJSON();
         JSONObject sampleIndexJSON = TestUtil.createSampleIndexJSON(
                 "TestProject", "TestSample", "AGGGC", "TCGAA",  2
         );
@@ -84,9 +52,9 @@ class InputTest {
 
         Input input = new Input(inputObject.toJSONString());
 
-        assertEquals("DEMULTIPLEX", input.program.name());
+        assertEquals(4, input.processingThreadNumber);
         assertEquals(sampleIndexSpec, input.sampleIndexSpecSet.iterator().next());
-        assertEquals(Path.of("test/workdirPath").toAbsolutePath(), input.workdirPath);
-        assertEquals(Path.of("test/bclPath").toAbsolutePath(), input.bclPath);
+        assertEquals(Path.of("test/workdir").toAbsolutePath(), input.workdirPath);
+        assertEquals(Path.of("test/bcl").toAbsolutePath(), input.bclPath);
     }
 }

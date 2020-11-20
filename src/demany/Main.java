@@ -2,7 +2,6 @@ package demany;
 
 import demany.Context.Input;
 import demany.Program.Demultiplex;
-import demany.Program.Program;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -28,16 +27,8 @@ public class Main {
         // parse the input
         Input input = new Input(inputStringBuilder.toString());
 
-        // dispatch to the correct program
-        if (input.program == Program.CHECK_INDICES) {
-            System.exit(checkIndices(input));
-
-        } else if(input.program == Program.DEMULTIPLEX) {
-            System.exit(Demultiplex.ExecuteDemultiplex(input));
-
-        } else {
-            throw new RuntimeException("unexpected error");
-        }
+        // dispatch to the demultiplex program
+        System.exit(Demultiplex.ExecuteDemultiplex(input));
     }
 
     private static void setupStandardOutLogging() {
