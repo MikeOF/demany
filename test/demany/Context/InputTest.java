@@ -4,14 +4,11 @@ import demany.SampleIndex.SampleIndexSpec;
 import demany.TestUtil;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 
 
 class InputTestHelper {
@@ -48,7 +45,14 @@ class InputTest {
                 "TestProject", "TestSample", "AGGGC", "TCGAA",  2
         );
         InputTestHelper.addSampleIndexJSON(inputObject, sampleIndexJSON);
-        SampleIndexSpec sampleIndexSpec = TestUtil.getSampleIndexSpec(sampleIndexJSON);
+        SampleIndexSpec sampleIndexSpec = new SampleIndexSpec(
+                "TestProject-TestSample",
+                "TestProject",
+                "TestSample",
+                "AGGGC",
+                "TCGAA",
+                2
+        );
 
         Input input = new Input(inputObject.toJSONString());
 

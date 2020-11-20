@@ -4,6 +4,27 @@ import org.json.simple.JSONObject;
 
 public class SampleIndexSpec {
 
+    public static SampleIndexSpec fromJSON(JSONObject jsonObject) throws Exception {
+
+        try {
+            String project = jsonObject.get("project").toString();
+            String sample = jsonObject.get("sample").toString();
+            String index1 = jsonObject.get("index1").toString();
+
+            String id = project + "-" + sample;
+
+            String index2 = null;
+            if (jsonObject.get("index2") != null) { index2 = jsonObject.get("index2").toString(); }
+
+            int lane = Integer.parseInt(jsonObject.get("lane").toString());
+
+            return new SampleIndexSpec(id, project, sample, index1, index2, lane);
+
+        } catch (Exception e) {
+            throw new Exception(String.format("Could not parse sample index from JSON: %s", jsonObject.toJSONString()));
+        }
+    }
+
     public final String id;
     public final String project;
     public final String sample;
@@ -11,26 +32,32 @@ public class SampleIndexSpec {
     public final String index2;
     public final int lane;
 
-    public SampleIndexSpec(JSONObject jsonObject) throws Exception {
+    public SampleIndexSpec(String id, String project, String sample, String index1, String index2, int lane) {
 
-        try {
-            this.project = jsonObject.get("project").toString();
-            this.sample = jsonObject.get("sample").toString();
-            this.index1 = jsonObject.get("index1").toString();
-
-            this.id = this.project + "-" + this.sample;
-
-            if (jsonObject.get("index2") == null) {
-                this.index2 = null;
-            } else {
-                this.index2 = jsonObject.get("index2").toString();
-            }
-
-            this.lane = Integer.parseInt(jsonObject.get("lane").toString());
-
-        } catch (Exception e) {
-            throw new Exception(String.format("Could not parse sample index from JSON: %s", jsonObject.toJSONString()));
+        // check input
+        if (id == null || id.isEmpty()) { throw new RuntimeException("id can be neither null nor empty"); }
+        if (project == null || project.isEmpty()) {
+            throw new RuntimeException("project can be neither null nor empty");
         }
+        if (sample == null || sample.isEmpty()) {
+            throw new RuntimeException("sample can be neither null nor empty");
+        }
+        if (index1 == null || index1.isEmpty()) {
+            throw new RuntimeException("index1 can be neither null nor empty");
+        }
+        if (index2 != null && index2.isEmpty()) {
+            throw new RuntimeException("index2 can be null or not empty");
+        }
+        if (lane < 1) {
+            throw new RuntimeException("lane must be greater than 1");
+        }
+
+        this.id = id;
+        this.project = project;
+        this.sample = sample;
+        this.index1 = index1;
+        this.index2 = index2;
+        this.lane = lane;
     }
 
     @Override

@@ -37,7 +37,7 @@ public class Input {
         Set<SampleIndexSpec> tempSampleIndexSpecSet = new HashSet<>();
         for (Object sampleIndexSpecObject : sampleIndexSpecJSONArray) {
 
-            tempSampleIndexSpecSet.add(new SampleIndexSpec((JSONObject) sampleIndexSpecObject));
+            tempSampleIndexSpecSet.add(SampleIndexSpec.fromJSON((JSONObject) sampleIndexSpecObject));
         }
         this.sampleIndexSpecSet = Collections.unmodifiableSet(tempSampleIndexSpecSet);
 

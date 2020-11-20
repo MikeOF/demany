@@ -21,7 +21,7 @@ public class TestUtil {
 
     public static SampleIndexSpec getSampleIndexSpec(JSONObject jsonObject) throws Exception {
 
-        return new SampleIndexSpec(jsonObject);
+        return SampleIndexSpec.fromJSON(jsonObject);
     }
 
     public static SampleIndexSpec getSampleIndexSpec(String project, String sample, String index1, String index2,
