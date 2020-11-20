@@ -27,7 +27,9 @@ public class WriterThread extends Thread {
         this.sequenceGroupFlow = sequenceGroupFlow;
 
         // add an undetermined fastq writer group for this lane
-        Map<String, Map<String, Fastq>> outputFastqByReadTypeById = demultiplexingContext.outputFastqByReadTypeByIdByLaneStr.get(laneStr);
+        Map<String, Map<String, Fastq>> outputFastqByReadTypeById =
+                demultiplexingContext.outputFastqByReadTypeByIdByLaneStr.get(laneStr);
+
         for (String id : outputFastqByReadTypeById.keySet()) {
             this.fastqWriterGroupById.put(
                     id,
@@ -40,6 +42,8 @@ public class WriterThread extends Thread {
     public void run() {
 
         while(true) {
+
+            // reset the "did work" variable
             boolean didWork = false;
 
             // attempt to take a collection of sequence groups

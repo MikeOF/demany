@@ -22,7 +22,8 @@ public class DemultiplexingThread extends Thread {
     final SequenceGroupFlow sequenceGroupFlow;
     final DemultiplexingContext demultiplexingContext;
 
-    public DemultiplexingThread(int demultiplexingThreadId, SequenceGroupFlow sequenceGroupFlow, DemultiplexingContext demultiplexingContext) {
+    public DemultiplexingThread(int demultiplexingThreadId, SequenceGroupFlow sequenceGroupFlow,
+                                DemultiplexingContext demultiplexingContext) {
 
         this.demultiplexingThreadId = demultiplexingThreadId;
         this.sequenceGroupFlow = sequenceGroupFlow;
@@ -35,7 +36,8 @@ public class DemultiplexingThread extends Thread {
 
             this.countByIndexStrByIdByLaneStr.get(laneStr).put(DemultiplexingContext.UNDETERMINED_ID, new HashMap<>());
 
-            for (DemultiplexingContext.SampleIdData sampleIdData : demultiplexingContext.sampleIdDataSetByLaneStr.get(laneStr)) {
+            for (DemultiplexingContext.SampleIdData sampleIdData :
+                    demultiplexingContext.sampleIdDataSetByLaneStr.get(laneStr)) {
 
                 this.countByIndexStrByIdByLaneStr.get(laneStr).put(sampleIdData.id, new HashMap<>());
             }
@@ -46,40 +48,44 @@ public class DemultiplexingThread extends Thread {
     public void run() {
 
         while (true) {
+
+            // reset the "did work" variable
             boolean didWork = false;
 
             // get a list of lanes in order of their urgency to be processed
-            List<String> laneStrList = sequenceGroupFlow.getMultiplexedSequenceGroupLaneStrPriorityList();
+            List<String> laneStrList = this.sequenceGroupFlow.getMultiplexedSequenceGroupLaneStrPriorityList();
 
-            if (!laneStrList.isEmpty()) {
+            for (String laneStr : laneStrList) {
 
-                for (String laneStr : laneStrList) {
+                // demultiplex a group of sequences if needed for this lane
+                if (this.sequenceGroupFlow.moreDemultiplexedSequenceGroupsNeeded(laneStr)) {
 
-                    // demultiplex a group of sequences if needed for this lane
-                    if (sequenceGroupFlow.moreDemultiplexedSequenceGroupsNeeded(laneStr)) {
+                    // get a multiplexed sequence group from this lane
+                    SequenceGroup sequenceGroup = this.sequenceGroupFlow.takeMultiplexedSequenceGroup(laneStr);
 
-                        // get a multiplexed sequence group from this lane
-                        SequenceGroup sequenceGroup = sequenceGroupFlow.takeMultiplexedSequenceGroup(laneStr);
+                    if (sequenceGroup == null) { continue; }  // try next lane
 
-                        if (sequenceGroup == null) { continue; }  // try nex lane
+                    try {
 
-                        try {
+                        // demultiplex this sequence group
+                        HashMap<String, CompressedSequenceGroup> compressedSequenceGroupById = demultiplexSequenceGroup(
+                                laneStr, sequenceGroup
+                        );
 
-                            // demultiplex this sequence group
-                            HashMap<String, CompressedSequenceGroup> compressedSequenceGroupById = demultiplexSequenceGroup(
-                                    laneStr, sequenceGroup
-                            );
+                        // put the demultiplexed sequence groups in their out queues
+                        this.sequenceGroupFlow.addDemultiplexedSequenceGroups(laneStr, compressedSequenceGroupById);
 
-                            // put the demultiplexed sequence groups in their out queues
-                            sequenceGroupFlow.addDemultiplexedSequenceGroups(laneStr, compressedSequenceGroupById);
-
-                        } catch (IOException e) {
-                            throw new RuntimeException("could not create the compressed sequence group by id: " + e.getMessage());
-                        }
-
-                        // mark that we did work
-                        didWork = true;
+                    } catch (IOException e) {
+                        throw new RuntimeException(
+                                "could not create the compressed sequence group by id: " + e.getMessage()
+                        );
                     }
+
+                    // mark that we did work
+                    didWork = true;
+
+                    // break from the for loop
+                    break;
                 }
             }
 
@@ -89,16 +95,15 @@ public class DemultiplexingThread extends Thread {
                 Utils.tryToSleep();
 
                 // check to see if we are finished
-                if (sequenceGroupFlow.allReaderThreadsFinished() &&
-                        !sequenceGroupFlow.moreMultiplexedSequenceGroupsAvailable()) {
+                if (this.sequenceGroupFlow.allReaderThreadsFinished()
+                        && !this.sequenceGroupFlow.moreMultiplexedSequenceGroupsAvailable()) {
 
                     break;
                 }
-
             }
         }
 
-        // submit this threads index counts to the sequence group flow
+        // submit this thread's index counts to the sequence group flow
         this.sequenceGroupFlow.submitCountByIndexStrByIdByLaneStr(this.countByIndexStrByIdByLaneStr);
 
         // mark that this thread has finished on the sequence group flow
@@ -112,12 +117,16 @@ public class DemultiplexingThread extends Thread {
         HashMap<String, CompressedSequenceGroup> compressedSequenceGroupById = new HashMap<>();
 
         compressedSequenceGroupById.put(
-                DemultiplexingContext.UNDETERMINED_ID, new CompressedSequenceGroup(this.demultiplexingContext.readTypeSet)
+                DemultiplexingContext.UNDETERMINED_ID,
+                new CompressedSequenceGroup(this.demultiplexingContext.readTypeSet)
         );
 
-        for (DemultiplexingContext.SampleIdData sampleIdData : this.demultiplexingContext.sampleIdDataSetByLaneStr.get(laneStr)) {
+        for (DemultiplexingContext.SampleIdData sampleIdData :
+                this.demultiplexingContext.sampleIdDataSetByLaneStr.get(laneStr)) {
+
             compressedSequenceGroupById.put(
-                    sampleIdData.id, new CompressedSequenceGroup(this.demultiplexingContext.readTypeSet)
+                    sampleIdData.id,
+                    new CompressedSequenceGroup(this.demultiplexingContext.readTypeSet)
             );
         }
 
@@ -125,7 +134,7 @@ public class DemultiplexingThread extends Thread {
         HashMap<String, HashMap<String, Long>> countByIndexStrById = this.countByIndexStrByIdByLaneStr.get(laneStr);
 
         // get the lookup for this lane
-        SampleIndexLookup lookup = demultiplexingContext.sampleIndexLookupByLaneStr.get(laneStr);
+        SampleIndexLookup lookup = this.demultiplexingContext.sampleIndexLookupByLaneStr.get(laneStr);
 
         // demultiplex the input sequence group
         SequenceLines index2SeqLines;
@@ -133,12 +142,14 @@ public class DemultiplexingThread extends Thread {
         for (int i = 0; i < sequenceGroup.size(); i++) {
 
             // get this index lines and index strings
-            SequenceLines index1SeqLines = sequenceGroup.sequenceListByReadType.get(this.demultiplexingContext.index1ReadType).get(i);
+            SequenceLines index1SeqLines =
+                    sequenceGroup.sequenceListByReadType.get(this.demultiplexingContext.index1ReadType).get(i);
             String index1 = index1SeqLines.line2.substring(0, this.demultiplexingContext.index1Length);
 
             if (this.demultiplexingContext.hasIndex2) {
 
-                index2SeqLines = sequenceGroup.sequenceListByReadType.get(this.demultiplexingContext.index2ReadType).get(i);
+                index2SeqLines =
+                        sequenceGroup.sequenceListByReadType.get(this.demultiplexingContext.index2ReadType).get(i);
                 index2 = index2SeqLines.line2.substring(0, this.demultiplexingContext.index2Length);
             }
 
@@ -161,7 +172,8 @@ public class DemultiplexingThread extends Thread {
 
             // get the index string
             String indexStr;
-            if (this.demultiplexingContext.hasIndex2) { indexStr = index1 + "-" + index2; } else { indexStr = index1; }
+            if (this.demultiplexingContext.hasIndex2) { indexStr = index1 + "-" + index2; }
+            else { indexStr = index1; }
 
             // record the index count
             if (!countByIndexStr.containsKey(indexStr)) {
