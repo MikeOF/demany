@@ -8,9 +8,9 @@ import java.util.HashSet;
 public class SampleIndexKeyMapping {
 
     public final SampleIndexSpec sampleIndexSpec;
-    private final HashSet<String> index1IdentityKeySet;
+    private final HashSet<String> index1IdentityKeySet = new HashSet<>();
     private final HashSet<String> index2IdentityKeySet;
-    private final HashSet<String> index1KeySet;
+    private final HashSet<String> index1KeySet = new HashSet<>();
     private final HashSet<String> index2KeySet;
 
     public SampleIndexKeyMapping(SampleIndexSpec sampleIndexSpec, int index1KeyLength, int index2KeyLength) throws RuntimeException {
@@ -22,9 +22,7 @@ public class SampleIndexKeyMapping {
         this.sampleIndexSpec = sampleIndexSpec;
 
         // index 1 key set
-        this.index1IdentityKeySet = new HashSet<>();
-        this.index1KeySet = new HashSet<>();
-        fillKeySet(sampleIndexSpec.index1, index1KeyLength, index1IdentityKeySet, index1KeySet);
+        fillKeySet(this.sampleIndexSpec.index1, index1KeyLength, this.index1IdentityKeySet, this.index1KeySet);
 
         // index 2 key set
         if (index2KeyLength == 0 || sampleIndexSpec.index2 == null) {
@@ -35,7 +33,7 @@ public class SampleIndexKeyMapping {
             this.index2IdentityKeySet = new HashSet<>();
             this.index2KeySet = new HashSet<>();
 
-            fillKeySet(sampleIndexSpec.index2, index2KeyLength, index2IdentityKeySet, index2KeySet);
+            fillKeySet(this.sampleIndexSpec.index2, index2KeyLength, this.index2IdentityKeySet, this.index2KeySet);
         }
 
     }
@@ -60,7 +58,8 @@ public class SampleIndexKeyMapping {
         return new HashSet<>(index2KeySet);
     }
 
-    private static void fillKeySet(String index, int keyLength, HashSet<String> identityKeySet, HashSet<String> keySet) {
+    private static void fillKeySet(String index, int keyLength, HashSet<String> identityKeySet,
+                                   HashSet<String> keySet) {
 
         for (int variableIndex = -1; variableIndex < Math.min(index.length(), keyLength); variableIndex++) {
 
