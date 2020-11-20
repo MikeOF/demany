@@ -50,9 +50,7 @@ public class Input {
         // get the bcl dir path
         this.bclPath = Paths.get(inputObject.get(Input.bclPathKey).toString()).toAbsolutePath();
 
-        // get the demultiplexing Thread Number
-        this.processingThreadNumber = Integer.parseInt(
-                inputObject.get(Input.processingThreadNumberKey).toString()
-        );
+        // get the processing Thread Number
+        this.processingThreadNumber = Integer.parseInt(inputObject.get(Input.processingThreadNumberKey).toString());
     }
 }

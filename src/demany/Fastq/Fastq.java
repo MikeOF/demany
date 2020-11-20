@@ -12,6 +12,10 @@ import java.util.regex.Pattern;
 
 public class Fastq {
 
+    // -----------------------------------------------------------------------------------------------------------------
+    //     STATIC
+    // -------------------------------------------------------------------------------------------------------------
+
     public static final String INDEX_1_READ_TYPE_STR = "I1";
     public static final String INDEX_2_READ_TYPE_STR = "I2";
     public static final String SAMPLE_1_STR = "S1";
@@ -32,6 +36,8 @@ public class Fastq {
             Pattern.CASE_INSENSITIVE
     );
 
+    private static final Pattern laneStrPattern = Pattern.compile("(L)([0]*)([0-9]*)", Pattern.CASE_INSENSITIVE);
+
     public static Fastq getSampleFastqAtDir(Path dirPath, String sample, String laneStr, String readTypeStr) {
 
         checkParentDirPath(dirPath);
@@ -39,11 +45,31 @@ public class Fastq {
         return new Fastq(dirPath.resolve(getFilenameForSampleFastq(sample, laneStr, readTypeStr)));
     }
 
+    private static String getFilenameForSampleFastq(String sample, String laneStr, String readTypeStr) {
+        return sample + "_" + SAMPLE_1_STR + "_" + laneStr + "_" + readTypeStr + "_" + STANDARD_TAIL;
+    }
+
     public static Fastq getUndeterminedFastqAtDir(Path dirPath, String laneStr, String readTypeStr) {
 
         checkParentDirPath(dirPath);
 
         return new Fastq(dirPath.resolve(getFilenameForUndeterminedFastq(laneStr, readTypeStr)));
+    }
+
+    private static String getFilenameForUndeterminedFastq(String laneStr, String readTypeStr) {
+        return "Undetermined_S0_" + laneStr + "_" + readTypeStr + "_" + STANDARD_TAIL;
+    }
+
+    private static void checkParentDirPath(Path dirPath) {
+
+        // check path
+        if (!dirPath.isAbsolute()) {
+            throw new RuntimeException("dirPath must be absolute");
+        }
+
+        if (!Files.isDirectory(dirPath)) {
+            throw new RuntimeException("dirPath must be an existant directory");
+        }
     }
 
     public static FilenameFilter getFastqFilenameFilter() {
@@ -61,28 +87,18 @@ public class Fastq {
         return Integer.parseInt(matcher.group(3));
     }
 
-    private static void checkParentDirPath(Path dirPath) {
-
-        // check path
-        if (!dirPath.isAbsolute()) {
-            throw new RuntimeException("dirPath must be absolute");
-        }
-
-        if (!Files.isDirectory(dirPath)) {
-            throw new RuntimeException("dirPath must be an existant directory");
-        }
-    }
-
-    private static final Pattern laneStrPattern = Pattern.compile("(L)([0]*)([0-9]*)", Pattern.CASE_INSENSITIVE);
+    // -----------------------------------------------------------------------------------------------------------------
+    //     INSTANCE
+    // -------------------------------------------------------------------------------------------------------------
 
     public final Path path;
     public final String filename;
-    private final boolean isUndetermined;
     public final String name;
     public final String sampleNumber;
     public final String laneStr;
     public final String readTypeStr;
     public final String tail;
+    private final boolean isUndetermined;
     public final boolean isAnIndexFastq;
 
     public Fastq(Path path) throws RuntimeException {
@@ -92,18 +108,23 @@ public class Fastq {
         this.filename = path.getFileName().toString();
 
         // determined if it is a sample fastq or an undetermiend fastq
-        Matcher undeterminedMatcher = undeterminedFastqPattern.matcher(filename);
-        Matcher sampleMatcher = sampleFastqPattern.matcher(filename);
+        Matcher undeterminedMatcher = Fastq.undeterminedFastqPattern.matcher(this.filename);
+        Matcher sampleMatcher = Fastq.sampleFastqPattern.matcher(this.filename);
+
+        // run pattern matching
+        boolean undeterminedMatches = undeterminedMatcher.matches();
+        boolean sampleMatches = sampleMatcher.matches();
 
         // check matches
-        if (!undeterminedMatcher.matches() && !sampleMatcher.matches()) {
-            throw new RuntimeException("cannot be niether undetermiend nor sample fastq: " + filename);
+        if (!undeterminedMatches && !sampleMatches) {
+            throw new RuntimeException("cannot be niether undetermiend nor sample fastq: " + this.filename);
         }
 
-        isUndetermined = undeterminedMatcher.matches();
+        // determine if this an undetermined fastq
+        this.isUndetermined = undeterminedMatches;
 
         // set fastq properties
-        Matcher matcher = undeterminedMatcher.matches() ? undeterminedMatcher : sampleMatcher;
+        Matcher matcher = undeterminedMatches ? undeterminedMatcher : sampleMatcher;
 
         this.name = matcher.group(1);
         this.sampleNumber = matcher.group(2);
@@ -112,7 +133,7 @@ public class Fastq {
         this.tail = matcher.group(5);
 
         // determine if this is an index fastq
-        this.isAnIndexFastq = indexReadTypePattern.matcher(this.readTypeStr).matches();
+        this.isAnIndexFastq = Fastq.indexReadTypePattern.matcher(this.readTypeStr).matches();
     }
 
     @Override
@@ -128,14 +149,6 @@ public class Fastq {
     @Override
     public int hashCode() {
         return path.hashCode();
-    }
-
-    private static String getFilenameForSampleFastq(String sample, String laneStr, String readTypeStr) {
-        return sample + "_" + SAMPLE_1_STR + "_" + laneStr + "_" + readTypeStr + "_" + STANDARD_TAIL;
-    }
-
-    private static String getFilenameForUndeterminedFastq(String laneStr, String readTypeStr) {
-        return "Undetermined_S0_" + laneStr + "_" + readTypeStr + "_" + STANDARD_TAIL;
     }
 
     public boolean isAnUndeterminedFastq() {

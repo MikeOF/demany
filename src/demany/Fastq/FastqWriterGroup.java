@@ -3,22 +3,26 @@ package demany.Fastq;
 import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 public class FastqWriterGroup {
 
-    public final HashMap<String, FileOutputStream> fileOutputStreamByReadType = new HashMap<>();
+    public final Map<String, FileOutputStream> fileOutputStreamByReadType;
 
     public FastqWriterGroup(Map<String, Fastq> fastqByReadType) throws IOException {
 
         // get a writer for each fastq path passed in
+        Map<String, FileOutputStream> tempFileOutputStreamByReadType = new HashMap<>();
         for (String readType : fastqByReadType.keySet()) {
 
-            this.fileOutputStreamByReadType.put(
+            tempFileOutputStreamByReadType.put(
                     readType, new FileOutputStream(fastqByReadType.get(readType).path.toString())
             );
         }
+
+        this.fileOutputStreamByReadType = Collections.unmodifiableMap(tempFileOutputStreamByReadType);
     }
 
     public void writeSequences(CompressedSequenceGroup compressedSequenceGroup) throws IOException {

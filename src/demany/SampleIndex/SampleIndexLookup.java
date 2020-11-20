@@ -33,7 +33,6 @@ public class SampleIndexLookup {
 
         // create the lookup map
         lookupMap = new HashMap<>();
-        SequenceOperator sequenceOperator = new SequenceOperator(true);
 
         ArrayList<SampleIndexKeyMapping> sampleIndexKeyMappingArrayList =
                 sampleIndexKeyMappingCollection.getSampleIndexKeyMappingList();
@@ -72,7 +71,7 @@ public class SampleIndexLookup {
 
                 HashSet<String> newIndex2KeySet = new HashSet<>();
                 for (String key : index2KeySet) {
-                    newIndex2KeySet.add(sequenceOperator.getReverseCompliment(key));
+                    newIndex2KeySet.add(SequenceOperator.getReverseCompliment(key));
                 }
 
                 index2KeySet = newIndex2KeySet;

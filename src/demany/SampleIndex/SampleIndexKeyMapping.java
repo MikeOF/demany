@@ -62,11 +62,7 @@ public class SampleIndexKeyMapping {
 
     private static void fillKeySet(String index, int keyLength, HashSet<String> identityKeySet, HashSet<String> keySet) {
 
-        // get a sequence operator
-        SequenceOperator sequenceOperator = new SequenceOperator(true);
-
         for (int variableIndex = -1; variableIndex < Math.min(index.length(), keyLength); variableIndex++) {
-
 
             // get a list with lists of characters at each position
             ArrayList<ArrayList<Character>> positionList = new ArrayList<>();
@@ -75,7 +71,7 @@ public class SampleIndexKeyMapping {
                 if (positionIndex == variableIndex || positionIndex >= index.length()) {
 
                     // add a list of all valid characters
-                    positionList.add(sequenceOperator.getValidCharacterList());
+                    positionList.add(SequenceOperator.getValidCharacterList());
 
                 } else {
 

@@ -20,7 +20,8 @@ public class WriterThread extends Thread {
     private final SequenceGroupFlow sequenceGroupFlow;
     private final HashMap<String, FastqWriterGroup> fastqWriterGroupById = new HashMap<>();
 
-    public WriterThread(String laneStr, SequenceGroupFlow sequenceGroupFlow, DemultiplexingContext demultiplexingContext) throws IOException {
+    public WriterThread(String laneStr, SequenceGroupFlow sequenceGroupFlow,
+                        DemultiplexingContext demultiplexingContext) throws IOException {
 
         this.laneStr = laneStr;
         this.sequenceGroupFlow = sequenceGroupFlow;
@@ -42,7 +43,7 @@ public class WriterThread extends Thread {
             boolean didWork = false;
 
             // attempt to take a collection of sequence groups
-            HashMap<String, CompressedSequenceGroup> compressedSequenceGroupById =
+            Map<String, CompressedSequenceGroup> compressedSequenceGroupById =
                     this.sequenceGroupFlow.takeDemultiplexedSequenceGroups(this.laneStr);
 
             // write sequences if we got em
@@ -66,16 +67,21 @@ public class WriterThread extends Thread {
                 Utils.tryToSleep();
 
                 // check to see if we are finished
-                if (this.sequenceGroupFlow.allDemultiplexingThreadsFinished() &&
-                        !this.sequenceGroupFlow.moreDemultiplexedSequenceGroupsAvailable()) {
+                if (this.sequenceGroupFlow.allDemultiplexingThreadsFinished()
+                        && !this.sequenceGroupFlow.moreDemultiplexedSequenceGroupsAvailable(this.laneStr)) {
 
                     break;
                 }
-
             }
         }
 
-        // mark that this thread has finished
-        this.sequenceGroupFlow.markWriterThreadFinished(this.laneStr);
+        // close all writer groups
+        for (FastqWriterGroup fastqWriterGroup : this.fastqWriterGroupById.values()) {
+            try {
+                fastqWriterGroup.close();
+            } catch (IOException e) {
+                throw new RuntimeException("could not close fastq writer group: " + e.getMessage());
+            }
+        }
     }
 }

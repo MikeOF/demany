@@ -1,6 +1,5 @@
 package demany.Fastq;
 
-import demany.Fastq.SequenceOperator;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -8,39 +7,17 @@ import static org.junit.jupiter.api.Assertions.*;
 class SequenceOperatorTest {
 
     @Test
-    void sequenceCharactersAreValidWithoutWildcard() {
+    void sequenceCharactersAreValid() {
 
-        SequenceOperator seqOperator = new SequenceOperator(false);
-
-        assertTrue(seqOperator.sequenceCharactersAreValid("ACGTTGCGCGTA"));
-        assertFalse(seqOperator.sequenceCharactersAreValid("ACFGD"));
-        assertFalse(seqOperator.sequenceCharactersAreValid("ACN"));
+        assertTrue(SequenceOperator.sequenceCharactersAreValid("ACGTTGCGCGTA"));
+        assertFalse(SequenceOperator.sequenceCharactersAreValid("ACFGD"));
+        assertTrue(SequenceOperator.sequenceCharactersAreValid("ACN"));
     }
 
     @Test
-    void sequenceCharactersAreValidWithWildcard() {
+    void getReverseCompliment() {
 
-        SequenceOperator seqOperator = new SequenceOperator(true);
-
-        assertTrue(seqOperator.sequenceCharactersAreValid("ACGTTGCGCGTA"));
-        assertFalse(seqOperator.sequenceCharactersAreValid("ACFGD"));
-        assertTrue(seqOperator.sequenceCharactersAreValid("ACN"));
-    }
-
-    @Test
-    void getReverseComplimentWithoutWildcard() {
-
-        SequenceOperator seqOperator = new SequenceOperator(false);
-
-        assertEquals("AACGT", seqOperator.getReverseCompliment("ACGTT"));
-    }
-
-    @Test
-    void getReverseComplimentWithWildcard() {
-
-        SequenceOperator seqOperator = new SequenceOperator(true);
-
-        assertEquals("TNTACGCN", seqOperator.getReverseCompliment("NGCGTANA"));
+        assertEquals("TNTACGCN", SequenceOperator.getReverseCompliment("NGCGTANA"));
 
     }
 }

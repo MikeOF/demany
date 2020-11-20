@@ -4,23 +4,27 @@ import demany.Utils.Utils;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 public class FastqReaderGroup {
 
-    private final HashMap<String, BufferedReader> readerByReadType = new HashMap<>();
+    private final Map<String, BufferedReader> readerByReadType;
     private boolean doneReading = false;
 
     public FastqReaderGroup(Map<String, Fastq> fastqByReadType) throws IOException {
 
         // get a reader for each fastq passed in
+        Map<String, BufferedReader> tempReaderByReadType = new HashMap<>();
         for (String readType : fastqByReadType.keySet()) {
 
-            this.readerByReadType.put(
+            tempReaderByReadType.put(
                     readType, Utils.getBufferedGzippedFileReader(fastqByReadType.get(readType).path)
             );
         }
+
+        this.readerByReadType = Collections.unmodifiableMap(tempReaderByReadType);
     }
 
     public SequenceGroup readSequences() throws IOException {

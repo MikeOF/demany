@@ -4,27 +4,16 @@ import java.util.*;
 
 public class SequenceOperator {
 
-    private final Set<Character> validCharacterSet;
-    private final Map<Character, Character> complimentByValidCharacter;
+    private static final Set<Character> validCharacterSet = Set.of('A', 'T', 'G', 'C', 'N');;
+    private static final Map<Character, Character> complimentByValidCharacter = Map.of(
+            'A', 'T',
+            'T', 'A',
+            'G', 'C',
+            'C', 'G',
+            'N', 'N'
+    );
 
-    public SequenceOperator(boolean wildcard) {
-
-        // create the valid character set
-        validCharacterSet = new HashSet<>(Arrays.asList('A', 'T', 'G', 'C'));
-
-        if (wildcard) { validCharacterSet.add('N'); }
-
-        // create the compliment by valid character set
-        complimentByValidCharacter = new HashMap<>();
-        complimentByValidCharacter.put('A', 'T');
-        complimentByValidCharacter.put('T', 'A');
-        complimentByValidCharacter.put('G', 'C');
-        complimentByValidCharacter.put('C', 'G');
-
-        if (wildcard) { complimentByValidCharacter.put('N', 'N'); }
-    }
-
-    public boolean sequenceCharactersAreValid(String sequence) {
+    public static boolean sequenceCharactersAreValid(String sequence) {
 
         for (int i = 0; i < sequence.length(); i++) {
 
@@ -36,7 +25,7 @@ public class SequenceOperator {
         return true;
     }
 
-    public String getReverseCompliment(String sequence) {
+    public static String getReverseCompliment(String sequence) {
 
         StringBuilder reverseComplimentBuilder = new StringBuilder();
 
@@ -52,5 +41,5 @@ public class SequenceOperator {
         return reverseComplimentBuilder.toString();
     }
 
-    public ArrayList<Character> getValidCharacterList() { return new ArrayList<>(validCharacterSet); }
+    public static ArrayList<Character> getValidCharacterList() { return new ArrayList<>(validCharacterSet); }
 }

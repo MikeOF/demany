@@ -7,59 +7,51 @@ import java.util.stream.Collectors;
 
 public class SequenceGroupFlow {
 
-    static final int SEQUENCE_GROUP_QUEUE_MAX_SIZE = 3;
+    private static final int SEQUENCE_GROUP_QUEUE_MAX_SIZE = 4;
 
-    static class LockSequenceGroupQueuePair {
+    private static class LockSequenceGroupQueuePair {
 
         final ReentrantLock lock = new ReentrantLock();
         final Queue<SequenceGroup> sequenceGroupQueue = new LinkedList<>();
     }
 
-    static class LockSequenceGroupByIdQueuePair {
+    private static class LockSequenceGroupByIdQueuePair {
 
         final ReentrantLock lock = new ReentrantLock();
         final Queue<HashMap<String, CompressedSequenceGroup>> compressedSequenceGroupByIdQueue = new LinkedList<>();
     }
 
     private final Lock readerThreadFinishedByLaneStrLock = new ReentrantLock();
-    private final HashMap<String, Boolean> readerThreadFinishedByLaneStr = new HashMap<>();
+    private final Map<String, Boolean> readerThreadFinishedByLaneStr = new HashMap<>();
 
     private final Lock demultiplexingThreadFinishedByIdLock = new ReentrantLock();
-    private final HashMap<Integer, Boolean> demultiplexingThreadFinishedById = new HashMap<>();
+    private final Map<Integer, Boolean> demultiplexingThreadFinishedById = new HashMap<>();
 
-    private final Lock writerThreadFinishedByLaneStrLock = new ReentrantLock();
-    private final HashMap<String, Boolean> writerThreadFinishedByLaneStr = new HashMap<>();
-
-    private final HashMap<String, LockSequenceGroupQueuePair> multiplexedSeqGroupsByLaneStr = new HashMap<>();
-    private final HashMap<String, LockSequenceGroupByIdQueuePair> demultiplexedSeqGroupsByLaneStr = new HashMap<>();
+    private final Map<String, LockSequenceGroupQueuePair> multiplexedSeqGroupsByLaneStr = new HashMap<>();
+    private final Map<String, LockSequenceGroupByIdQueuePair> demultiplexedSeqGroupsByLaneStr = new HashMap<>();
 
     private final Lock countByIndexStrByIdByLaneStrLock = new ReentrantLock();
-    private final HashMap<String, HashMap<String, HashMap<String, Long>>> countByIndexStrByIdByLaneStr = new HashMap<>();
+    private final Map<String, HashMap<String, HashMap<String, Long>>> countByIndexStrByIdByLaneStr = new HashMap<>();
 
     public SequenceGroupFlow(Set<String> laneStrSet, Set<Integer> demultiplexingThreadIdSet) {
 
-        // create a map to store when reader threads have completed
+        // init a map to store when reader threads have completed
         for (String laneStr : laneStrSet) {
             this.readerThreadFinishedByLaneStr.put(laneStr, false);
         }
 
-        // create a map to store when demultiplexing threads have completed
+        // init a map to store when demultiplexing threads have completed
         for (int id : demultiplexingThreadIdSet) {
             this.demultiplexingThreadFinishedById.put(id, false);
         }
 
-        // create a map to store when writer threads have completed
-        for (String laneStr : laneStrSet) {
-            this.writerThreadFinishedByLaneStr.put(laneStr, false);
-        }
-
-        // initialize the multiplexed sequence groups
+        // init the multiplexed sequence group by lane map
         for (String laneStr : laneStrSet) {
 
             this.multiplexedSeqGroupsByLaneStr.put(laneStr, new LockSequenceGroupQueuePair());
         }
 
-        // initialize the demultiplexed sequence groups
+        // init the demultiplexed sequence group by lane map
         for (String laneStr : laneStrSet) {
             this.demultiplexedSeqGroupsByLaneStr.put(laneStr, new LockSequenceGroupByIdQueuePair());
         }
@@ -97,22 +89,6 @@ public class SequenceGroupFlow {
         return this.demultiplexingThreadFinishedById.values().stream().allMatch(Boolean::booleanValue);
     }
 
-    public void markWriterThreadFinished(String laneStr) {
-
-        this.writerThreadFinishedByLaneStrLock.lock();
-
-        try {
-            this.writerThreadFinishedByLaneStr.put(laneStr, true);
-
-        } finally {
-            this.writerThreadFinishedByLaneStrLock.unlock();
-        }
-    }
-
-    public boolean allWriterThreadsFinished() {
-        return this.writerThreadFinishedByLaneStr.values().stream().allMatch(Boolean::booleanValue);
-    }
-
     public boolean moreMultiplexedSequenceGroupsAvailable() {
 
         for (String laneStr : multiplexedSeqGroupsByLaneStr.keySet()) {
@@ -142,7 +118,6 @@ public class SequenceGroupFlow {
         pair.lock.lock();
 
         try {
-
             pair.sequenceGroupQueue.add(sequenceGroup);
 
         } finally {
@@ -192,17 +167,10 @@ public class SequenceGroupFlow {
                 ).collect(Collectors.toList());
     }
 
-    public boolean moreDemultiplexedSequenceGroupsAvailable() {
+    public boolean moreDemultiplexedSequenceGroupsAvailable(String laneStr) {
 
-        for (String laneStr : this.demultiplexedSeqGroupsByLaneStr.keySet()) {
-
-            // lock not needed
-            if (!this.demultiplexedSeqGroupsByLaneStr.get(laneStr).compressedSequenceGroupByIdQueue.isEmpty())  {
-                return true;
-            }
-        }
-
-        return false;
+        // lock not needed
+        return !this.demultiplexedSeqGroupsByLaneStr.get(laneStr).compressedSequenceGroupByIdQueue.isEmpty();
     }
 
     public boolean moreDemultiplexedSequenceGroupsNeeded(String laneStr) {
@@ -213,7 +181,8 @@ public class SequenceGroupFlow {
         return pair.compressedSequenceGroupByIdQueue.size() < SequenceGroupFlow.SEQUENCE_GROUP_QUEUE_MAX_SIZE;
     }
 
-    public void addDemultiplexedSequenceGroups(String laneStr, HashMap<String, CompressedSequenceGroup> compressedSequenceGroupById) {
+    public void addDemultiplexedSequenceGroups(String laneStr,
+                                               HashMap<String, CompressedSequenceGroup> compressedSequenceGroupById) {
 
         LockSequenceGroupByIdQueuePair pair = this.demultiplexedSeqGroupsByLaneStr.get(laneStr);
 
@@ -229,7 +198,7 @@ public class SequenceGroupFlow {
         }
     }
 
-    public HashMap<String, CompressedSequenceGroup> takeDemultiplexedSequenceGroups(String laneStr) {
+    public Map<String, CompressedSequenceGroup> takeDemultiplexedSequenceGroups(String laneStr) {
 
         LockSequenceGroupByIdQueuePair pair = this.demultiplexedSeqGroupsByLaneStr.get(laneStr);
 

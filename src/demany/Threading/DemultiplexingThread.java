@@ -105,7 +105,8 @@ public class DemultiplexingThread extends Thread {
         this.sequenceGroupFlow.markDemultiplexingThreadFinished(this.demultiplexingThreadId);
     }
 
-    private HashMap<String, CompressedSequenceGroup> demultiplexSequenceGroup(String laneStr, SequenceGroup sequenceGroup) throws IOException {
+    private HashMap<String, CompressedSequenceGroup> demultiplexSequenceGroup(
+            String laneStr, SequenceGroup sequenceGroup) throws IOException {
 
         // initialize the sequence group by id map
         HashMap<String, CompressedSequenceGroup> compressedSequenceGroupById = new HashMap<>();
