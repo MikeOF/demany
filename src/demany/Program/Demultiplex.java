@@ -314,7 +314,7 @@ public class Demultiplex {
                     sampleIndexKeyMappingCollection, false
             );
             SampleIndexLookup revCompLookup = new SampleIndexLookup(
-                    sampleIndexKeyMappingCollection, false
+                    sampleIndexKeyMappingCollection, true
             );
 
             // get the index fastqs
