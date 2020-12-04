@@ -58,7 +58,11 @@ public class Demultiplex {
         Files.createDirectory(input.workdirPath);
 
         // determine the run parameters
+        LOGGER.log(Level.INFO," -- determining BCL parameters -- ");
         BCLParameters bclParameters = new BCLParameters(input.bclPath);
+        for (String line : bclParameters.getLogLines()) {
+            LOGGER.info(line);
+        }
 
         // run bcl2fastq
         Path bcl2fastqOutputDirPath = runBcl2fastq(bclParameters, input);
@@ -77,6 +81,7 @@ public class Demultiplex {
         );
 
         // determine the index 2 reverse compliment parameter
+        LOGGER.info(" -- determining index 2 orientation parameter -- ");
         boolean index2ReverseCompliment = determineIndex2ReverseCompliment(
                 input, bclParameters, masterFastqByReadTypeByLaneStr, sampleIndexSpecSetByLaneStr
         );
@@ -289,7 +294,17 @@ public class Demultiplex {
     ) throws IOException {
 
         // check input
-        if (!input.sampleSpecSetHasIndex2 || !bclParameters.hasIndex2) { return false; }
+        if (!input.sampleSpecSetHasIndex2) {
+            LOGGER.info("sample spec set does not have index 2");
+            LOGGER.info("index 2 reverse compliment parameter is false");
+            return false;
+        }
+
+        if (!bclParameters.hasIndex2) {
+            LOGGER.info("read set does not have an index 2 read");
+            LOGGER.info("index 2 reverse compliment parameter is false");
+            return false;
+        }
 
         // make sure that the index 2 read type is in each lane
         if (!masterFastqByReadTypeByLaneStr.values().stream().allMatch(v->v.containsKey(Fastq.INDEX_2_READ_TYPE_STR))) {
@@ -445,7 +460,13 @@ public class Demultiplex {
             throw new RuntimeException(errorStringBuilder.toString());
         }
 
-        return revCompFindCount > forwardFindCount;
+        boolean index2ReverseCompliment = revCompFindCount > forwardFindCount;
+
+        LOGGER.info("forward find count is " + forwardFindCount);
+        LOGGER.info("reverse compliment find count is " + revCompFindCount);
+        LOGGER.info("index 2 reverse compliment parameter is " + index2ReverseCompliment);
+
+        return index2ReverseCompliment;
     }
 
     private static DemultiplexingContext determineDemultiplexingContext(

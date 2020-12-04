@@ -13,10 +13,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class BCLParameters {
@@ -53,6 +50,12 @@ public class BCLParameters {
             result = 31 * result + this.length;
             result = 31 * result + (this.isIndexRead ? 1 : 0);
             return result;
+        }
+
+        @Override
+        public String toString() {
+            return "ReadInfo { read number: " + this.readNumber + ", is index read: " + this.isIndexRead
+                    + ", length: " + this.length + " }";
         }
     }
 
@@ -142,5 +145,21 @@ public class BCLParameters {
                 .max(Comparator.comparingInt(a -> a.readNumber))
                 .orElseThrow()
                 .length;
+    }
+
+    public List<String> getLogLines() {
+
+        List<String> logLines = new ArrayList<>();
+
+        logLines.add("Index 1 Length: " + this.index1Length);
+        logLines.add("Index 2 Length: " + this.index2Length);
+        logLines.add("Has Index 2: " + this.hasIndex2);
+        logLines.add("Read Info Set:");
+
+        for (BCLParameters.ReadInfo readInfo : this.readInfoSet) {
+            logLines.add("\t" + readInfo.toString());
+        }
+
+        return logLines;
     }
 }
