@@ -13,9 +13,7 @@ import demany.Threading.DemultiplexingThread;
 import demany.Threading.ReaderThread;
 import demany.Threading.WriterThread;
 import demany.Utils.Utils;
-import org.xml.sax.SAXException;
 
-import javax.xml.parsers.ParserConfigurationException;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -29,85 +27,108 @@ public class Demultiplex {
 
     private static final Logger LOGGER = Logger.getLogger( Demultiplex.class.getName() );
 
-    public static int ExecuteDemultiplex(Input input)
-            throws IOException, SAXException, ParserConfigurationException, InterruptedException {
+    public static int ExecuteDemultiplex(Input input) {
 
-        // print time
-        LOGGER.log(Level.INFO,"\n\n ---- Start of Demultiplexing Process ----\n");
+        try {
+            // print time
+            LOGGER.info("---- Start of Demultiplexing Process ----");
 
-        // check input
-        if (input.sampleIndexSpecSet.isEmpty()) {
-            throw new RuntimeException("sample index spec set is empty");
-        }
-        if (input.processingThreadNumber < 1) {
-            throw new RuntimeException("the processing thread number must be greater than 1");
-        }
-        if (Files.exists(input.workdirPath)) {
-            throw new RuntimeException(
-                    "workdir path already exists, stopping to avoid overwrite, " + input.workdirPath.toString()
+            // check input
+            if (input.sampleIndexSpecSet.isEmpty()) {
+                throw new RuntimeException("sample index spec set is empty");
+            }
+            if (input.processingThreadNumber < 1) {
+                throw new RuntimeException("the processing thread number must be greater than 1");
+            }
+            if (Files.exists(input.workdirPath)) {
+                throw new RuntimeException(
+                        "workdir path already exists, stopping to avoid overwrite, " + input.workdirPath.toString()
+                );
+            }
+            if (!Files.isDirectory(input.bclPath)) {
+                throw new RuntimeException("bcl path is not to an existant directory, " + input.bclPath.toString());
+            }
+            if (!Files.exists(input.bclPath.resolve("RTAComplete.txt"))) {
+                throw new RuntimeException("bcl path is not to a completed sequencing run, no RTAComplete.txt file found");
+            }
+
+            // create the workdir
+            Files.createDirectory(input.workdirPath);
+
+            // determine the run parameters
+            LOGGER.info("-- determining BCL parameters --");
+            BCLParameters bclParameters = new BCLParameters(input.bclPath);
+            for (String line : bclParameters.getLogLines()) { LOGGER.info(line); }
+
+            // run bcl2fastq
+            Path bcl2fastqOutputDirPath = runBcl2fastq(bclParameters, input);
+
+            // get master fastq by read type by lane str map
+            Map<String, Map<String, Fastq>> masterFastqByReadTypeByLaneStr = getMasterFastqByReadTypeByLaneStr(
+                    input,
+                    bcl2fastqOutputDirPath
             );
+
+            // get lane str by lane int map
+            Map<Integer, String> laneStrByLaneInt = getLaneStrByLaneInt(masterFastqByReadTypeByLaneStr);
+
+            // get sample index spec set by lane str map
+            Map<String, Set<SampleIndexSpec>> sampleIndexSpecSetByLaneStr = getSampleIndexSpecSetByLaneStr(
+                    input.sampleIndexSpecSet, laneStrByLaneInt
+            );
+
+            // determine the index 2 reverse compliment parameter
+            LOGGER.info("-- determining index 2 orientation parameter -- ");
+            boolean index2ReverseCompliment = determineIndex2ReverseCompliment(
+                    input, bclParameters, masterFastqByReadTypeByLaneStr, sampleIndexSpecSetByLaneStr
+            );
+
+            // determine the demultiplexing context
+            DemultiplexingContext demultiplexingContext = determineDemultiplexingContext(
+                    input,
+                    bclParameters,
+                    masterFastqByReadTypeByLaneStr,
+                    sampleIndexSpecSetByLaneStr,
+                    index2ReverseCompliment
+            );
+
+            // demultiplex the master fastqs
+            Map<String, Map<String, Map<String, Long>>> countByIndexStrByIdByLaneStr =
+                    demultiplexMasterFastqs(input, demultiplexingContext);
+
+            // write out the count by index str by sample id by lane string results
+            writeIndexCounts(demultiplexingContext, countByIndexStrByIdByLaneStr);
+
+            // write out the total counts file
+            writeTotalCounts(demultiplexingContext, countByIndexStrByIdByLaneStr);
+
+            LOGGER.log(Level.INFO, "---- End of Demultiplexing Process ----");
+
+            // exit the program successfully
+            return 0;
+
+        } catch (Exception e) {
+
+            // create log message
+            StringBuilder stringBuilder = new StringBuilder();
+
+            stringBuilder.append("Demultiplexing processes failed with error: \n\n");
+
+            for (StackTraceElement element : e.getStackTrace()) {
+                stringBuilder.append(element.toString());
+                stringBuilder.append("\n");
+            }
+
+            stringBuilder.append("\n");
+            stringBuilder.append(e.getMessage());
+            stringBuilder.append("\n");
+
+            // log the error message
+            LOGGER.log(Level.SEVERE, stringBuilder.toString());
+
+            // exit the program unsuccessfully
+            return 1;
         }
-        if (!Files.isDirectory(input.bclPath)) {
-            throw new RuntimeException("bcl path is not to an existant directory, " + input.bclPath.toString());
-        }
-        if (!Files.exists(input.bclPath.resolve("RTAComplete.txt"))) {
-            throw new RuntimeException("bcl path is not to a completed sequencing run, no RTAComplete.txt file found");
-        }
-
-        // create the workdir
-        Files.createDirectory(input.workdirPath);
-
-        // determine the run parameters
-        LOGGER.log(Level.INFO," -- determining BCL parameters -- ");
-        BCLParameters bclParameters = new BCLParameters(input.bclPath);
-        for (String line : bclParameters.getLogLines()) {
-            LOGGER.info(line);
-        }
-
-        // run bcl2fastq
-        Path bcl2fastqOutputDirPath = runBcl2fastq(bclParameters, input);
-
-        // get master fastq by read type by lane str map
-        Map<String, Map<String, Fastq>> masterFastqByReadTypeByLaneStr = getMasterFastqByReadTypeByLaneStr(
-                bcl2fastqOutputDirPath
-        );
-
-        // get lane str by lane int map
-        Map<Integer, String> laneStrByLaneInt = getLaneStrByLaneInt(masterFastqByReadTypeByLaneStr);
-
-        // get sample index spec set by lane str map
-        Map<String, Set<SampleIndexSpec>> sampleIndexSpecSetByLaneStr = getSampleIndexSpecSetByLaneStr(
-                input.sampleIndexSpecSet, laneStrByLaneInt
-        );
-
-        // determine the index 2 reverse compliment parameter
-        LOGGER.info(" -- determining index 2 orientation parameter -- ");
-        boolean index2ReverseCompliment = determineIndex2ReverseCompliment(
-                input, bclParameters, masterFastqByReadTypeByLaneStr, sampleIndexSpecSetByLaneStr
-        );
-
-        // determine the demultiplexing context
-        DemultiplexingContext demultiplexingContext = determineDemultiplexingContext(
-                input,
-                bclParameters,
-                masterFastqByReadTypeByLaneStr,
-                sampleIndexSpecSetByLaneStr,
-                index2ReverseCompliment
-        );
-
-        // demultiplex the master fastqs
-        Map<String, Map<String, Map<String, Long>>> countByIndexStrByIdByLaneStr =
-                demultiplexMasterFastqs(input, demultiplexingContext);
-
-        // write out the count by index str by sample id by lane string results
-        writeIndexCounts(demultiplexingContext, countByIndexStrByIdByLaneStr);
-
-        // write out the total counts file
-        writeTotalCounts(demultiplexingContext, countByIndexStrByIdByLaneStr);
-
-        LOGGER.log(Level.INFO,"\n\n ---- End of Demultiplexing Process ----\n");
-
-        return 0;
     }
 
     private static Path runBcl2fastq(BCLParameters bclParameters, Input input)
@@ -144,7 +165,7 @@ public class Demultiplex {
         String sampleSheet = sampleSheetBuilder.toString();
 
         // log and write the sample sheet
-        LOGGER.log(Level.INFO, "\n\nSample Sheet:\n\n{0}", sampleSheet);
+        LOGGER.info("Sample Sheet:\n\n" + sampleSheet);
 
         BufferedWriter writer = Files.newBufferedWriter(sampleSheetPath);
         writer.write(sampleSheet);
@@ -193,8 +214,8 @@ public class Demultiplex {
         return outputDirPath;
     }
 
-    private static Map<String, Map<String, Fastq>> getMasterFastqByReadTypeByLaneStr(Path bcl2fastqOutputDirPath)
-            throws IOException {
+    private static Map<String, Map<String, Fastq>> getMasterFastqByReadTypeByLaneStr(
+            Input input, Path bcl2fastqOutputDirPath) throws IOException {
 
         // get the paths of the master fastqs
         File dirFile = bcl2fastqOutputDirPath.toFile();
@@ -210,6 +231,9 @@ public class Demultiplex {
         for (File file : fastqFiles) {
 
             Fastq fastq = new Fastq(file.toPath());
+
+            // ignore this fastq if it is an index 2 fastq and we do not have any index 2 fastqs in this run
+            if (!input.sampleSpecSetHasIndex2 && fastq.readTypeStr.equals(Fastq.INDEX_2_READ_TYPE_STR)) { continue; }
 
             if (!resultMap.containsKey(fastq.laneStr)) {
                 resultMap.put(fastq.laneStr, new HashMap<>());

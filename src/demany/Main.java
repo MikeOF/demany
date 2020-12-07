@@ -48,8 +48,4 @@ public class Main {
                 "%1$tb %1$td, %1$tY %1$tl:%1$tM:%1$tS %1$Tp %2$s %4$s: %5$s%n"
         );
     }
-
-    private static int checkIndices(Input input) {
-        return 0;
-    }
 }
