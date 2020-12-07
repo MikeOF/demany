@@ -1,5 +1,3 @@
-package demany;
-
 import demany.Context.Input;
 import demany.Program.Demultiplex;
 
@@ -11,7 +9,7 @@ import java.util.logging.SimpleFormatter;
 import java.util.logging.StreamHandler;
 
 
-public class Main {
+public class demany {
 
     public static void main(String[] args) throws Exception {
 
