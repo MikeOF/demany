@@ -18,12 +18,14 @@ public class Input {
     static final String workdirPathKey = "workdirPath";
     static final String bclPathKey = "bclPath";
     static final String processingThreadNumberKey = "processingThreadNumber";
+    static final String useBasesMaskArgKey = "--use-bases-mask";
 
     public final Set<SampleIndexSpec> sampleIndexSpecSet;
     public final boolean sampleSpecSetHasIndex2;
     public final Path workdirPath;
     public final Path bclPath;
     public final int processingThreadNumber;
+    public final String useBasesMaskArg;
 
     public Input(String jsonInput) throws Exception {
 
@@ -52,5 +54,10 @@ public class Input {
 
         // get the processing Thread Number
         this.processingThreadNumber = Integer.parseInt(inputObject.get(Input.processingThreadNumberKey).toString());
+
+        // get the use bases mask argument if it is available
+        this.useBasesMaskArg = inputObject.containsKey(Input.useBasesMaskArgKey) ?
+                inputObject.get(Input.useBasesMaskArgKey).toString() : null;
+
     }
 }

@@ -184,25 +184,33 @@ public class Demultiplex {
 
         // define the process
         ProcessBuilder builder = new ProcessBuilder();
-        builder.command(
-                "bcl2fastq",
-                "--min-log-level", "WARNING",
-                "--minimum-trimmed-read-length", Integer.toString(minTrimmedReadLength),
-                "--mask-short-adapter-reads", Integer.toString(minTrimmedReadLength),
-                "--create-fastq-for-index-reads",
-                "--ignore-missing-positions",
-                "--ignore-missing-filter",
-                "--ignore-missing-bcls",
-                "--runfolder-dir", input.bclPath.toString(),
-                "--sample-sheet", sampleSheetPath.toString(),
-                "--interop-dir", interopDirPath.toString(),
-                "--stats-dir", statsDirPath.toString(),
-                "--reports-dir", reportsDirPath.toString(),
-                "--output-dir", outputDirPath.toString(),
-                "-p", Integer.toString(pthreads),
-                "-r", Integer.toString(iothreads),
-                "-w", Integer.toString(iothreads)
-        );
+
+        List<String> commandList = new LinkedList<>();
+
+        commandList.add("bcl2fastq");
+        commandList.add("--min-log-level"); commandList.add("WARNING");
+        commandList.add("--minimum-trimmed-read-length"); commandList.add(Integer.toString(minTrimmedReadLength));
+        commandList.add("--mask-short-adapter-reads"); commandList.add(Integer.toString(minTrimmedReadLength));
+        commandList.add("--create-fastq-for-index-reads");
+        commandList.add("--ignore-missing-positions");
+        commandList.add("--ignore-missing-filter");
+        commandList.add("--ignore-missing-bcls");
+
+        if (input.useBasesMaskArg != null) {
+            commandList.add("--use-bases-mask"); commandList.add(input.useBasesMaskArg);
+        }
+
+        commandList.add("--runfolder-dir"); commandList.add(input.bclPath.toString());
+        commandList.add("--sample-sheet"); commandList.add(sampleSheetPath.toString());
+        commandList.add("--interop-dir"); commandList.add(interopDirPath.toString());
+        commandList.add("--stats-dir"); commandList.add(statsDirPath.toString());
+        commandList.add("--reports-dir"); commandList.add(reportsDirPath.toString());
+        commandList.add("--output-dir"); commandList.add(outputDirPath.toString());
+        commandList.add("-p"); commandList.add(Integer.toString(pthreads));
+        commandList.add("-r"); commandList.add(Integer.toString(iothreads));
+        commandList.add("-w"); commandList.add(Integer.toString(iothreads));
+
+        builder.command(commandList);
         builder.inheritIO();
 
         // run the bcl2fastq process

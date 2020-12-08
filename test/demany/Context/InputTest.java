@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 
 class InputTestHelper {
@@ -60,5 +61,33 @@ class InputTest {
         assertEquals(sampleIndexSpec, input.sampleIndexSpecSet.iterator().next());
         assertEquals(Path.of("test/workdir").toAbsolutePath(), input.workdirPath);
         assertEquals(Path.of("test/bcl").toAbsolutePath(), input.bclPath);
+        assertNull(input.useBasesMaskArg);
+    }
+
+    @Test
+    void testInputObjectConstructorDemultiplexWithUseBasesMaskArg() throws Exception {
+
+        JSONObject inputObject = InputTestHelper.createInputJSON();
+        inputObject.put("--use-bases-mask", "Y51,I8,Y16,Y51");
+        JSONObject sampleIndexJSON = TestUtil.createSampleIndexJSON(
+                "TestProject", "TestSample", "AGGGC", "TCGAA",  2
+        );
+        InputTestHelper.addSampleIndexJSON(inputObject, sampleIndexJSON);
+        SampleIndexSpec sampleIndexSpec = new SampleIndexSpec(
+                "TestProject-TestSample",
+                "TestProject",
+                "TestSample",
+                "AGGGC",
+                "TCGAA",
+                2
+        );
+
+        Input input = new Input(inputObject.toJSONString());
+
+        assertEquals(4, input.processingThreadNumber);
+        assertEquals(sampleIndexSpec, input.sampleIndexSpecSet.iterator().next());
+        assertEquals(Path.of("test/workdir").toAbsolutePath(), input.workdirPath);
+        assertEquals(Path.of("test/bcl").toAbsolutePath(), input.bclPath);
+        assertEquals("Y51,I8,Y16,Y51", input.useBasesMaskArg);
     }
 }
