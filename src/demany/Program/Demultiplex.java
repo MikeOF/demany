@@ -349,9 +349,17 @@ public class Demultiplex {
         Map<String, Integer> revCompFindCountByIndexStr = new HashMap<>();
         for (String laneStr : masterFastqByReadTypeByLaneStr.keySet()) {
 
+            // get a set of all dual index sample specs
+            Set<SampleIndexSpec> sampleIndexSpecSet = sampleIndexSpecSetByLaneStr.get(laneStr).stream()
+                    .filter(SampleIndexSpec::hasIndex2)
+                    .collect(Collectors.toSet());
+
+            // skip this lane if we don't have dual index samples
+            if (sampleIndexSpecSet.isEmpty()) { continue; }
+
             // get the sample index key mapping collection
             SampleIndexKeyMappingCollection sampleIndexKeyMappingCollection = new SampleIndexKeyMappingCollection(
-                    sampleIndexSpecSetByLaneStr.get(laneStr),
+                    sampleIndexSpecSet,
                     bclParameters.index1Length,
                     bclParameters.index2Length
             );
