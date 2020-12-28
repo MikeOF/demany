@@ -603,12 +603,11 @@ public class Demultiplex {
 
                 // get sorted index string list
                 List<String> sortedIndexStrList = countByIndexStr.keySet().stream()
-                        .filter(v->countByIndexStr.get(v) > 100)
                         .sorted(Comparator.comparingLong(k -> -countByIndexStr.get(k)))
                         .collect(Collectors.toList());
 
                 // get file path for this sample id
-                Path outputFilePath = laneStrDirPath.resolve(id + ".tsv");
+                Path outputFilePath = laneStrDirPath.resolve(id + "-" + laneStr + ".tsv");
 
                 // open, write, and close the file
                 try (
